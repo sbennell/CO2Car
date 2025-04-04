@@ -11,7 +11,7 @@ Added
 
     🔄 Automatic system reset after each race for quick repeat runs.
 
-[v0.1.0] - 2025-04-04
+[v0.2.0] - 2025-04-04
 Added
 
     ✅ Optional debug logging: added #define DEBUG flag to toggle sensor distance output.
