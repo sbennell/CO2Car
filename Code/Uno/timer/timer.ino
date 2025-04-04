@@ -1,5 +1,5 @@
 /*
---- CO₂ Car Race Timer Version 0.1 - 03 April 2025 ---
+--- CO₂ Car Race Timer Version 0.2.0 - 04 April 2025 ---
 This system uses two VL53L0X distance sensors to time a CO₂-powered car race.
 It measures the time taken for each car to cross the sensor line and declares the winner based on the fastest time.
 
@@ -19,10 +19,24 @@ Hardware:
 - Two VL53L0X distance sensors.
 - Relay connected to fire CO₂ for the race.
 - Uses I2C communication to interact with sensors.
+
+[v0.2.0] - 2025-04-04
+Added
+
+    ✅ Optional debug logging: added #define DEBUG flag to toggle sensor distance output.
+
+    ✅ About section at top of code (project description placeholder).
+
+Changed
+
+    🔁 Refactored startRace() to initiate relay trigger and timer simultaneously for improved timing accuracy.
+
 */
 
 #include <Wire.h>
 #include <VL53L0X.h>
+
+#define DEBUG false  // Set to false to disable debug sensor readings
 
 VL53L0X sensor1;
 VL53L0X sensor2;
@@ -118,16 +132,15 @@ void startRace() {
     Serial.println("\n🚦 Race Starting...");
     Serial.println("🔹 Firing CO₂ Relay...");
     
-    // Activate relay for 500ms to fire CO₂
-    digitalWrite(relayPin, LOW);
-    delay(500);
+    // Activate relay to fire CO₂
+    digitalWrite(relayPin, LOW);     // Fire CO₂
+    startTime = millis();             // Start timer
+    raceStarted = true;               // Set race flag
+    car1Finished = false;             // Reset finish flags
+    car2Finished = false;
+    delay(100);
     digitalWrite(relayPin, HIGH);
     Serial.println("✔ Relay deactivated");
-
-    startTime = millis();
-    raceStarted = true;
-    car1Finished = false;
-    car2Finished = false;
 
     Serial.println("🏎 Race in progress...");
 }
@@ -145,11 +158,13 @@ void checkFinish() {
         return;
     }
 
-    Serial.print("📏 Sensor Readings: C1 = ");
-    Serial.print(dist1);
-    Serial.print(" mm, C2 = ");
-    Serial.print(dist2);
-    Serial.println(" mm");
+    if (DEBUG) {
+        Serial.print("📏 Sensor Readings: C1 = ");
+        Serial.print(dist1);
+        Serial.print(" mm, C2 = ");
+        Serial.print(dist2);
+        Serial.println(" mm");
+    }
 
     if (dist1 < 150 && !car1Finished) {  // Car 1 crosses the sensor
         car1Time = millis() - startTime;
