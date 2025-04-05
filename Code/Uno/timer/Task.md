@@ -3,21 +3,20 @@
 ## 📝 Current Tasks
 
 ### 🏁 Race Timer Features
-- [ ] Implement automatic reset after race finish (timer reset, car states reset).
+- [x] Implement automatic reset after race finish (timer reset, car states reset).
 - [x] Improve relay control for CO₂ firing mechanism to ensure more reliable trigger timing.
 - [ ] Add display of race results on an LCD/OLED screen.
     - Display race status, winner, and times for each car.
     - Ensure real-time updates during the race and after the race finishes.
 
 ### ⚙️ Button and Input Handling
-- [X] Add debounce logic to prevent false button presses (for load and start buttons).
-- [X] Test with external momentary switches to ensure reliable input detection.
+- [x] Add debounce logic to prevent false button presses (for load and start buttons).
+- [x] Test with external momentary switches to ensure reliable input detection.
   
 ### 📊 Debugging and Logging
 - [ ] Implement verbose debug logging for troubleshooting (e.g., add logging for relay activation).
 - [ ] Add support for logging race time to an SD card or external storage.
 
-    
 ### 📦 Code Organization & Documentation
 - [x] Update **README.md** with new features and setup instructions.
 - [ ] Add more comments to the code for better maintainability and readability.
@@ -28,6 +27,8 @@
 - [x] Added car load detection (using load button or 'L' command).
 - [x] Prevented race start until cars are loaded.
 - [x] Added edge detection for buttons to prevent multiple presses during a single action.
+- [x] Implemented automatic reset after race finish (timer reset, car states reset).
+- [x] Improved relay control for CO₂ firing mechanism for more reliable trigger timing.
 
 ### ⚙️ Button and Input Handling
 - [x] Added support for momentary switches on load and start buttons.

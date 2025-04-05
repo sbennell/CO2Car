@@ -1,6 +1,21 @@
-# Changelog
+# 📦 CO₂ Car Race Timer for Arduino Uno – Changelog
 
 All notable changes to this project will be documented in this file.
+
+---
+
+## [0.4.2] - 2025-04-06
+### Changed
+- Races will now be considered a tie if both cars finish within 1ms of each other.
+
+---
+
+## [0.4.1] - 2025-04-06
+### Added
+- Subtracted 17ms from Car 2's finish time to normalize timing offset between sensors.
+
+### Fixed
+- Improved fairness in winner calculation based on timing compensation.
 
 ---
 ## [0.4.0] - 2025-04-06
@@ -59,6 +74,7 @@ All notable changes to this project will be documented in this file.
 ---
 
 ## [v0.1.0] - 2025-04-03
+Initial release
 
 ### Added
 - 🎯 Basic CO₂ car race timer functionality using two VL53L0X distance sensors.
