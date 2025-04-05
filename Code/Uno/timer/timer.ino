@@ -1,7 +1,30 @@
 /*
 --- CO₂ Car Race Timer Version 0.4.2 - 06 April 2025 ---
-Includes 17ms compensation on Car 2 finish time and tie condition within 1ms.
+This system uses two VL53L0X distance sensors to time a CO₂-powered car race.
+It measures the time taken for each car to cross the sensor line and declares the winner based on the fastest time.
+
+Features:
+- Two distance sensors (VL53L0X) track the progress of two cars.
+- Relay control to simulate the CO₂ firing mechanism.
+- Serial communication to start the race and display results.
+- Supports multiple races by resetting after each one.
+- LED indicator to show current race state (waiting, ready, racing, finished).
+- Buzzer feedback at race start and finish for audible cues.
+- Debounced physical buttons for car load and race start.
+
+Instructions:
+1. Connect the VL53L0X sensors and CO₂ relay to the specified pins.
+2. Open the Serial Monitor and send 'S' to start the race.
+3. The sensors will detect the cars as they pass, and the times will be displayed.
+4. After each race, the system resets and is ready for a new race.
+
+Hardware:
+- Two VL53L0X distance sensors.
+- Relay connected to fire CO₂ for the race.
+- Buzzer for audible feedback on race events.
+- Uses I2C communication to interact with sensors.
 */
+
 
 #include <Wire.h>
 #include <VL53L0X.h>
