@@ -3,6 +3,26 @@
 All notable changes to this project will be documented in this file.
 
 ---
+## [0.4.0] - 2025-04-06
+
+### Added:
+- **LED Indicators**: 
+  - **Waiting**: Red LED on, indicating that cars are not loaded and the system is waiting.
+  - **Ready**: Red and Green LEDs on, indicating that cars are loaded and the system is ready for the race.
+  - **Racing**: Blue LED blinking, indicating that the race is in progress.
+  - **Finished**: Green LED on, indicating that the race is finished and the results are available.
+- **Start Button Support**: You can now start the race using a physical momentary pushbutton (in addition to the `'S'` serial command).
+- **Debounce Logic for Buttons**: Debounced handling for both Load and Start buttons for reliable edge-triggered inputs.
+- **Buzzer Feedback**: 
+  - Short beep at **race start**.
+  - Long beep at **race finish** for clear audible feedback.
+- **Race State LED Indicators**: LEDs now reflect the race state: waiting, ready, racing, and finished.
+
+### Changed:
+- **Unified Start Logic**: Both physical button and serial `'S'` command use the same start routine with all conditions checked (e.g., cars must be loaded).
+- **Improved Serial Messaging**: Clearer prompts and warnings depending on system state (e.g., trying to start without loading cars).
+
+---
 
 ## [0.3.1] - 2025-04-04
 ### Bug Fixes:
