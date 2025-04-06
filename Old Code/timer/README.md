@@ -1,4 +1,4 @@
-# CO₂ Car Race Timer
+# CO₂ Car Race Timer for UNO
 
 ## Description
 
