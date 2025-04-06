@@ -25,6 +25,14 @@ The system features a responsive web interface for remote control and monitoring
 - **WebSocket communication**: Instant updates without page refreshes
 - **Tie handling**: Shows identical times for tied races
 
+#### Web Interface Screenshots
+
+##### Main Race Interface
+![Main Race Interface](images/Web-Interface-home.png)
+
+##### Configuration Interface
+![Configuration Interface](images/Web-Interface-Config.png)
+
 ## Hardware Requirements
 
 - **Two VL53L0X distance sensors**: Used to track the cars' progress through the track.
