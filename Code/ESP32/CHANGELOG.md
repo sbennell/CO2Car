@@ -4,6 +4,48 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [0.8.0] - 2025-04-07
+### Added
+  - Optimized sensor detection for high-speed passes
+  - Enhanced timing accuracy for faster races
+  - NTP time synchronization
+  - Set system time from NTP
+  - Add timezone support
+  - Include accurate timestamps in race history
+  - Show version number on boot via Serial
+  - Define version number as a constant
+  - Include build date in version info
+  - Backup NTP server support
+  - Offline time persistence
+  - Configurable timezone support
+  - Time settings storage in preferences
+
+### Changed
+- Improved sensor detection logic for high-speed operation
+- Enhanced version tracking with build information
+- Added feature flags for capability tracking
+- Updated documentation with high-speed testing capabilities
+
+---
+
+## [0.7.5] - 2025-04-06
+### Changed
+- Removed sensor 2 compensation calibration
+- Simplified configuration interface
+
+## [0.7.4] - 2025-04-06
+### Added
+- Configuration page for system settings
+- Configurable WiFi credentials
+- Adjustable sensor thresholds
+- Customizable race timing parameters
+
+## [0.7.3] - 2025-04-06
+### Added
+- NTP time synchronization for accurate timestamps
+- Timezone support (GMT+10 Sydney)
+- Race history now uses synchronized time
+
 ## [0.7.2] - 2025-04-06
 ### Fixed
 - Fixed race history not properly showing ties when page is reloaded
@@ -148,11 +190,11 @@ All notable changes to this project will be documented in this file.
 ## [v0.2.0] - 2025-04-04
 
 ### Added
-- ✅ Optional debug logging: added `#define DEBUG` flag to toggle sensor distance output.
-- ✅ About section at the top of the code with project description and instructions.
+- Optional debug logging: added `#define DEBUG` flag to toggle sensor distance output.
+- About section at the top of the code with project description and instructions.
 
 ### Changed
-- 🔁 Refactored `startRace()` to trigger relay and start timer simultaneously for improved accuracy.
+- Refactored `startRace()` to trigger relay and start timer simultaneously for improved accuracy.
 
 ---
 
@@ -160,8 +202,8 @@ All notable changes to this project will be documented in this file.
 Initial release
 
 ### Added
-- 🎯 Basic CO₂ car race timer functionality using two VL53L0X distance sensors.
-- 🔌 Relay control to simulate CO₂ canister firing.
-- 🖥 Serial interface for race start (`'S'` command) and result output.
-- ⏱ Millisecond timing for both lanes with automatic winner declaration.
-- 🔄 Automatic system reset after each race for quick repeat runs.
+- Basic CO₂ car race timer functionality using two VL53L0X distance sensors.
+- Relay control to simulate CO₂ canister firing.
+- Serial interface for race start (`'S'` command) and result output.
+- Millisecond timing for both lanes with automatic winner declaration.
+- Automatic system reset after each race for quick repeat runs.

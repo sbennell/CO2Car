@@ -3,6 +3,7 @@
 #include <ArduinoJson.h>
 #include <LittleFS.h>
 #include <vector>
+#include "TimeManager.h"
 
 struct RaceResult {
     unsigned long timestamp;
@@ -13,7 +14,7 @@ struct RaceResult {
 
 class RaceHistory {
 public:
-    RaceHistory();
+    RaceHistory(TimeManager& timeManager);
     void begin();
     void addRace(float lane1Time, float lane2Time);
     void getHistory(JsonDocument& doc, int limit = 10);
@@ -22,6 +23,7 @@ public:
 private:
     static const char* HISTORY_FILE;
     std::vector<RaceResult> races;
+    TimeManager& timeManager;
     void loadFromFile();
     void saveToFile();
 };

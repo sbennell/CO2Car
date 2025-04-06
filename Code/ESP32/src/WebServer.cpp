@@ -1,6 +1,7 @@
 #include "WebServer.h"
+#include "Version.h"
 
-WebServer::WebServer() : server(80), ws("/ws"), commandHandler(nullptr) {}
+WebServer::WebServer(TimeManager& tm, Configuration& cfg) : server(80), ws("/ws"), commandHandler(nullptr), timeManager(tm), raceHistory(tm), config(cfg) {}
 
 void WebServer::begin() {
     if (!LittleFS.begin(false)) {  // First try without formatting
@@ -49,6 +50,18 @@ void WebServer::setupRoutes() {
         }
     });
 
+    // Handle configuration page
+    server.on("/config", HTTP_GET, [](AsyncWebServerRequest *request) {
+        Serial.println("📄 Serving config.html");
+        if (LittleFS.exists("/config.html")) {
+            Serial.println("✅ Found config.html");
+            request->send(LittleFS, "/config.html", "text/html");
+        } else {
+            Serial.println("❌ config.html not found");
+            request->send(404, "text/plain", "config.html not found");
+        }
+    });
+
     // Handle favicon.ico
     server.on("/favicon.ico", HTTP_GET, [](AsyncWebServerRequest *request) {
         request->send(204);
@@ -85,12 +98,24 @@ void WebServer::sendRaceHistory(AsyncWebSocketClient *client) {
     client->text(output);
 }
 
+void WebServer::sendVersionInfo(AsyncWebSocketClient *client) {
+    StaticJsonDocument<200> doc;
+    doc["type"] = "version";
+    doc["version"] = VERSION_STRING;
+    doc["buildDate"] = BUILD_DATE;
+    
+    String output;
+    serializeJson(doc, output);
+    client->text(output);
+}
+
 void WebServer::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                                AwsEventType type, void *arg, uint8_t *data, size_t len) {
     switch (type) {
         case WS_EVT_CONNECT: {
             Serial.printf("📱 WebSocket client #%u connected\n", client->id());
             clients.push_back(client);
+            sendVersionInfo(client);
             sendRaceHistory(client);
             break;
         }
@@ -123,6 +148,41 @@ void WebServer::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *c
                     String jsonResponse;
                     serializeJson(response, jsonResponse);
                     client->text(jsonResponse);
+                } else if (strcmp(command, "get_config") == 0) {
+                    // Send current configuration
+                    StaticJsonDocument<512> response;
+                    response["type"] = "config";
+                    response["wifi"]["ssid"] = config.getWiFiSSID();
+                    response["wifi"]["password"] = config.getWiFiPassword();
+                    response["sensor"]["threshold"] = config.getSensorThreshold();
+                    response["timing"]["relay_ms"] = config.getRelayActivationTime();
+                    response["timing"]["tie_threshold"] = config.getTieThreshold();
+
+                    String output;
+                    serializeJson(response, output);
+                    client->text(output);
+                } else if (strcmp(command, "set_config") == 0) {
+                    // Update configuration
+                    const char* section = doc["section"];
+                    if (strcmp(section, "wifi") == 0) {
+                        config.setWiFiCredentials(
+                            doc["data"]["ssid"] | "",
+                            doc["data"]["password"] | ""
+                        );
+                    } else if (strcmp(section, "sensor") == 0) {
+                        config.setSensorThreshold(doc["data"]["threshold"] | 150);
+                    } else if (strcmp(section, "timing") == 0) {
+                        config.setRelayActivationTime(doc["data"]["relay_ms"] | 250);
+                        config.setTieThreshold(doc["data"]["tie_threshold"] | 0.002);
+
+                    }
+                    
+                    // Send confirmation
+                    StaticJsonDocument<64> response;
+                    response["type"] = "config_saved";
+                    String output;
+                    serializeJson(response, output);
+                    client->text(output);
                 } else if (commandHandler) {
                     commandHandler(command);
                 }

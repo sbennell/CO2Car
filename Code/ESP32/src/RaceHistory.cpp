@@ -36,7 +36,7 @@ bool ensureFileExists() {
     return true;
 }
 
-RaceHistory::RaceHistory() {}
+RaceHistory::RaceHistory(TimeManager& tm) : timeManager(tm) {}
 
 void RaceHistory::begin() {
     if (!ensureFileExists()) {
@@ -48,7 +48,14 @@ void RaceHistory::begin() {
 
 void RaceHistory::addRace(float lane1Time, float lane2Time) {
     RaceResult result;
-    result.timestamp = time(nullptr);
+    
+    // Ensure we have a valid timestamp
+    if (!timeManager.isTimeSet()) {
+        Serial.println("❌ Warning: Time not synchronized, using current millis as fallback");
+        result.timestamp = millis() / 1000; // Convert to seconds
+    } else {
+        result.timestamp = timeManager.getEpochTime();
+    }
     result.lane1Time = lane1Time;
     result.lane2Time = lane2Time;
     

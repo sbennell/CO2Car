@@ -1,5 +1,5 @@
 /*
---- CO₂ Car Race Timer Version 0.7.2 ESP32 - 06 April 2025 ---
+--- CO₂ Car Race Timer Version 0.8.0 ESP32 - 07 April 2025 ---
 This system uses two VL53L0X distance sensors to time a CO₂-powered car race.
 It measures the time taken for each car to cross the sensor line and declares the winner based on the fastest time.
 
@@ -35,6 +35,9 @@ Web Interface:
 #include <WiFi.h>
 #include <ArduinoJson.h>
 #include "WebServer.h"
+#include "Version.h"
+#include "TimeManager.h"
+#include "Configuration.h"
 
 // Function prototypes
 void setLEDState(String state);
@@ -44,17 +47,15 @@ void declareWinner();
 void connectToWiFi();
 void handleWebSocketCommand(const char* command);
 
-// Global WebServer instance
-WebServer webServer;
-
+// Global instances
+TimeManager timeManager;
+Configuration config;
+WebServer webServer(timeManager, config);
 VL53L0X sensor1;
 VL53L0X sensor2;
 
 #define DEBUG true
 
-// WiFi Configuration
-const char* ssid = "Network";
-const char* password = "Had2much!";
 bool wifiConnected = false;
 unsigned long lastWifiCheck = 0;
 const unsigned long WIFI_CHECK_INTERVAL = 5000;  // Check WiFi every 5 seconds
@@ -88,10 +89,10 @@ bool startButtonLastState = HIGH;
 void connectToWiFi() {
     if (WiFi.status() == WL_CONNECTED) return;
 
-    Serial.print("\n📡 Connecting to WiFi: ");
-    Serial.println(ssid);
+    Serial.print("\n📱 Connecting to WiFi: ");
+    Serial.println(config.getWiFiSSID());
     
-    WiFi.begin(ssid, password);
+    WiFi.begin(config.getWiFiSSID().c_str(), config.getWiFiPassword().c_str());
 
     int attempts = 0;
     while (WiFi.status() != WL_CONNECTED && attempts < 20) {
@@ -105,6 +106,10 @@ void connectToWiFi() {
         Serial.println("\n✅ Connected!");
         Serial.print("📍 IP: ");
         Serial.println(WiFi.localIP());
+        
+        // Initialize NTP after WiFi connection
+        Serial.print("🕒 Synchronizing NTP time");
+        timeManager.begin();
     } else {
         wifiConnected = false;
         Serial.println("\n❌ Connection failed");
@@ -138,7 +143,12 @@ void handleWebSocketCommand(const char* command) {
 
 void setup() {
     Serial.begin(115200);
-    Serial.println("\n--- CO₂ Car Race Timer ---");
+    Serial.println("\n=== CO₂ Car Race Timer ===");
+    
+    // Initialize configuration
+    config.begin();
+    Serial.printf("Version: %s (Built: %s)\n", VERSION_STRING, BUILD_DATE);
+    Serial.println("=========================");
     Serial.println("Initializing system...");
 
     // Initialize LEDC for buzzer
@@ -210,7 +220,8 @@ void setup() {
 }
 
 void loop() {
-    // Check WiFi status
+    checkWiFiStatus();
+    timeManager.update();
     static unsigned long lastWifiCheck = 0;
     static unsigned long lastSensorCheck = 0;
     
@@ -303,7 +314,7 @@ void startRace() {
     
     // Fire the relay (active LOW)
     digitalWrite(RELAY_PIN, LOW);
-    delay(250);  // 250ms activation time per requirements
+    delay(config.getRelayActivationTime());  // Configurable activation time
     digitalWrite(RELAY_PIN, HIGH);
     
     // Start the race
@@ -330,7 +341,7 @@ void checkFinish() {
     int dist1 = sensor1.readRangeContinuousMillimeters();
     int dist2 = sensor2.readRangeContinuousMillimeters();
     
-    if (!car1Finished && dist1 < 150) {
+    if (!car1Finished && dist1 < config.getSensorThreshold()) {
         car1Time = millis() - startTime;
         car1Finished = true;
         Serial.print("🏁 Car 1 Finished! Time: ");
@@ -339,7 +350,7 @@ void checkFinish() {
         webServer.notifyTimes(car1Time / 1000.0, car2Time / 1000.0);
     }
     
-    if (!car2Finished && dist2 < 150) {
+    if (!car2Finished && dist2 < config.getSensorThreshold()) {
         car2Time = millis() - startTime;
         car2Finished = true;
         Serial.print("🏁 Car 2 Finished! Time: ");
@@ -360,9 +371,9 @@ void declareWinner() {
     delay(500);
     ledcWrite(0, 0);
 
-    // Consider times within 2ms of each other as a tie
+    // Consider times within tie threshold of each other as a tie
     int timeDiff = abs((int)car1Time - (int)car2Time);
-    if (timeDiff <= 2) {
+    if (timeDiff <= (config.getTieThreshold() * 1000)) {
         // For ties, use the average of both times
         float avgTime = (car1Time + car2Time) / 2;
         car1Time = car2Time = avgTime;

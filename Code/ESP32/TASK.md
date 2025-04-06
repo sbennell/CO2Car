@@ -34,11 +34,15 @@
 - [x] Create timer functionality with millisecond precision
 - [x] Implement relay control for start sequence
 - [x] Develop finish line detection algorithm
-- [ ] Implement NTP time synchronization
-  - [ ] Configure NTP client
-  - [ ] Set system time from NTP
-  - [ ] Add timezone support
-  - [ ] Include accurate timestamps in race history
+- [x] Implement NTP time synchronization
+  - [x] Configure NTP client
+  - [x] Set system time from NTP
+  - [x] Add timezone support
+  - [x] Include accurate timestamps in race history
+- [x] Improve version information display
+  - [x] Show version number on boot via Serial
+  - [x] Define version number as a constant
+  - [x] Include build date in version info
 
 ### Race Logic
 - [x] Create race start sequence
@@ -59,6 +63,9 @@
   - [x] Race history table with past results
   - [x] WiFi signal strength indicator
   - [x] System status indicators (sensors, relay)
+  - [x] Version display in web interface
+    - [x] Show version on initial page load
+    - [x] Add version to system status section
 - [x] Implement WebSocket features:
   - [x] Real-time sensor readings
   - [x] Race state updates
@@ -73,11 +80,11 @@
   - [x] Automatic saving
   - [x] History display
   - [x] Race cleanup
-- [ ] Create configuration page
-  - [ ] WiFi settings
-  - [ ] Sensor thresholds
-  - [ ] Race timing parameters
-  - [ ] System calibration
+- [x] Create configuration page
+  - [x] WiFi settings
+  - [x] Sensor thresholds
+  - [x] Race timing parameters
+  - [x] System calibration
 - [ ] Implement offline functionality
   - [ ] Cache static assets
   - [ ] Local race history storage
