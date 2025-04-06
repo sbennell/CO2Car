@@ -34,6 +34,11 @@
 - [x] Create timer functionality with millisecond precision
 - [x] Implement relay control for start sequence
 - [x] Develop finish line detection algorithm
+- [ ] Implement NTP time synchronization
+  - [ ] Configure NTP client
+  - [ ] Set system time from NTP
+  - [ ] Add timezone support
+  - [ ] Include accurate timestamps in race history
 
 ### Race Logic
 - [x] Create race start sequence

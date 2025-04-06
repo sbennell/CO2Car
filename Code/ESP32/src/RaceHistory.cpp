@@ -51,7 +51,14 @@ void RaceHistory::addRace(float lane1Time, float lane2Time) {
     result.timestamp = time(nullptr);
     result.lane1Time = lane1Time;
     result.lane2Time = lane2Time;
-    result.winner = (lane1Time < lane2Time) ? 1 : 2;
+    
+    // Consider times within 0.002 seconds (2ms) as a tie
+    float timeDiff = abs(lane1Time - lane2Time);
+    if (timeDiff <= 0.002) {
+        result.winner = 0; // Tie
+    } else {
+        result.winner = (lane1Time < lane2Time) ? 1 : 2;
+    }
     
     races.push_back(result);
     if (races.size() > 50) { // Keep only last 50 races
