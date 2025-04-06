@@ -182,7 +182,7 @@
             timeCell.textContent = raceTime.toLocaleTimeString();
             lane1Cell.textContent = race.lane1.toFixed(3);
             lane2Cell.textContent = race.lane2.toFixed(3);
-            winnerCell.textContent = `Lane ${race.winner}`;
+            winnerCell.textContent = race.winner === 0 ? 'Tie' : `Lane ${race.winner}`;
 
             if (tbody.children.length > 10) {
                 tbody.deleteRow(-1);

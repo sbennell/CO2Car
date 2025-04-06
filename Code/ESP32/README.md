@@ -14,14 +14,16 @@ The system features a responsive web interface for remote control and monitoring
 - **Physical controls**: Load and start buttons with proper debouncing
 - **LED indicators**: Visual feedback of race state (waiting, ready, racing, finished)
 - **Buzzer feedback**: Audible cues at race start and finish
+- **Fair tie detection**: 2ms tolerance for accurate tie detection
 
 ### Web Interface Features
 - **Responsive design**: Mobile-friendly interface with touch controls
 - **Real-time updates**: Live race status and timing information
-- **Race history**: Track and display previous race results
+- **Race history**: Track and display previous race results with tie detection
 - **System monitoring**: WiFi signal strength and sensor health indicators
 - **Remote control**: Load cars and start races from any device
 - **WebSocket communication**: Instant updates without page refreshes
+- **Tie handling**: Shows identical times for tied races
 
 ## Hardware Requirements
 

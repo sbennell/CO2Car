@@ -192,13 +192,22 @@ void WebServer::notifyTimes(float lane1, float lane2) {
 }
 
 void WebServer::notifyRaceComplete(float lane1, float lane2) {
+    // Consider times within 0.002 seconds (2ms) as a tie
+    float timeDiff = abs(lane1 - lane2);
+    if (timeDiff <= 0.002) {
+        // For ties, use the average of both times
+        float avgTime = (lane1 + lane2) / 2;
+        lane1 = lane2 = avgTime;
+    }
+    
     raceHistory.addRace(lane1, lane2);
     
     StaticJsonDocument<200> doc;
     doc["type"] = "race_complete";
     doc["lane1"] = lane1;
     doc["lane2"] = lane2;
-    doc["winner"] = (lane1 < lane2) ? 1 : 2;
+    doc["winner"] = (timeDiff <= 0.002) ? 0 : (lane1 < lane2 ? 1 : 2);
+    
     broadcastJson(doc);
 }
 

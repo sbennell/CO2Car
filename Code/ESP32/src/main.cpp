@@ -1,5 +1,5 @@
 /*
---- CO₂ Car Race Timer Version 0.7.0 ESP32 - 06 April 2025 ---
+--- CO₂ Car Race Timer Version 0.7.1 ESP32 - 06 April 2025 ---
 This system uses two VL53L0X distance sensors to time a CO₂-powered car race.
 It measures the time taken for each car to cross the sensor line and declares the winner based on the fastest time.
 
@@ -12,6 +12,7 @@ Features:
 - RGB LED indicator for race state (waiting, ready, racing, finished)
 - Buzzer feedback at race start and finish
 - Debounced physical buttons for local control
+- Fair tie detection with 2ms tolerance
 
 ESP32 Pin Assignments:
 - I2C: SDA=GPIO21, SCL=GPIO22
@@ -26,6 +27,7 @@ Web Interface:
 - Remote load and start controls
 - Race history table with past results
 - System status indicators (WiFi, sensors)
+- Tie detection with identical times display
 */
 
 #include <Wire.h>
@@ -339,8 +341,6 @@ void checkFinish() {
     
     if (!car2Finished && dist2 < 150) {
         car2Time = millis() - startTime;
-        // Apply 17ms timing offset compensation for sensor 2
-        car2Time = (car2Time > 17) ? car2Time - 17 : 0;
         car2Finished = true;
         Serial.print("🏁 Car 2 Finished! Time: ");
         Serial.print(car2Time);
@@ -360,13 +360,18 @@ void declareWinner() {
     delay(500);
     ledcWrite(0, 0);
 
-    if (car1Time < car2Time) {
-      Serial.println("🏆 Car 1 Wins!");
-  } else if (car2Time < car1Time) {
-      Serial.println("🏆 Car 2 Wins!");
-  } else {
-      Serial.println("🤝 It's a tie!");
-  }
+    // Consider times within 2ms of each other as a tie
+    int timeDiff = abs((int)car1Time - (int)car2Time);
+    if (timeDiff <= 2) {
+        // For ties, use the average of both times
+        float avgTime = (car1Time + car2Time) / 2;
+        car1Time = car2Time = avgTime;
+        Serial.println("🤝 It's a tie!");
+    } else if (car1Time < car2Time) {
+        Serial.println("🏆 Car 1 Wins!");
+    } else {
+        Serial.println("🏆 Car 2 Wins!");
+    }
 
     Serial.print("📊 RESULT: C1=");
     Serial.print(car1Time);

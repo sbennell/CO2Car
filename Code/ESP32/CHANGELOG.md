@@ -1,8 +1,21 @@
-# 📦 CO₂ Car Race Timer for ESP32 – Changelog
+# CO₂ Car Race Timer for ESP32 – Changelog
 
 All notable changes to this project will be documented in this file.
 
 ---
+
+## [0.7.1] - 2025-04-06
+### Changed
+- **Race Timing**:
+  - Added fair tie detection with 2ms tolerance
+  - Both lanes now show identical times for ties
+  - Removed timing offset compensation
+  - Improved winner determination logic
+
+### Fixed
+- **Web Interface**:
+  - Race history now correctly shows "Tie" for tied races
+  - Identical times displayed for both lanes in ties
 
 ## [0.7.0] - 2025-04-06
 ### Added
