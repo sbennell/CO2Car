@@ -1,5 +1,5 @@
 /*
---- CO₂ Car Race Timer Version 0.4.2 - 06 April 2025 ---
+--- CO₂ Car Race Timer Version 0.5.0 ESP32 - 06 April 2025 ---
 This system uses two VL53L0X distance sensors to time a CO₂-powered car race.
 It measures the time taken for each car to cross the sensor line and declares the winner based on the fastest time.
 
@@ -8,41 +8,47 @@ Features:
 - Relay control to simulate the CO₂ firing mechanism.
 - Serial communication to start the race and display results.
 - Supports multiple races by resetting after each one.
-- LED indicator to show current race state (waiting, ready, racing, finished).
+- RGB LED indicator to show current race state (waiting, ready, racing, finished).
 - Buzzer feedback at race start and finish for audible cues.
 - Debounced physical buttons for car load and race start.
 
-Instructions:
-1. Connect the VL53L0X sensors and CO₂ relay to the specified pins.
-2. Open the Serial Monitor and send 'S' to start the race.
-3. The sensors will detect the cars as they pass, and the times will be displayed.
-4. After each race, the system resets and is ready for a new race.
-
-Hardware:
-- Two VL53L0X distance sensors.
-- Relay connected to fire CO₂ for the race.
-- Buzzer for audible feedback on race events.
-- Uses I2C communication to interact with sensors.
+ESP32 Pin Assignments:
+- I2C: SDA=GPIO21, SCL=GPIO22
+- VL53L0X Sensors: XSHUT1=GPIO16, XSHUT2=GPIO17
+- Buttons: LOAD=GPIO4, START=GPIO5
+- Relay: GPIO14
+- Buzzer: GPIO27
+- RGB LED: RED=GPIO25, GREEN=GPIO26, BLUE=GPIO33
 */
 
 #include <Wire.h>
 #include <VL53L0X.h>
 
+// Function prototypes
+void setLEDState(String state);
+void startRace();
+void checkFinish();
+void declareWinner();
+
 VL53L0X sensor1;
 VL53L0X sensor2;
 
 #define DEBUG false
+
+// Pin Definitions
 #define LOAD_BUTTON_PIN 4
 #define START_BUTTON_PIN 5
-#define XSHUT1 2
-#define XSHUT2 3
-#define relayPin 8
-#define BUZZER_PIN 9
+#define XSHUT1 16
+#define XSHUT2 17
+#define RELAY_PIN 14  // Changed back to GPIO14 per pin assignments
+#define BUZZER_PIN 27
 
-const int LED_RED = 10;
-const int LED_GREEN = 11;
-const int LED_BLUE = 12;
+// RGB LED Pins
+const int LED_RED = 25;
+const int LED_GREEN = 26;
+const int LED_BLUE = 33;
 
+// Race State Variables
 unsigned long startTime;
 bool raceStarted = false;
 bool car1Finished = false;
@@ -56,11 +62,11 @@ bool startButtonPressed = false;
 bool startButtonLastState = HIGH;
 
 void setup() {
-    Serial.begin(9600);
+    Serial.begin(115200);
     Serial.println("\n--- CO₂ Car Race Timer ---");
     Serial.println("Initializing system...");
 
-    Wire.begin();
+    Wire.begin(21, 22);  // SDA = 21, SCL = 22
     delay(100);
 
     pinMode(LED_RED, OUTPUT);
@@ -68,8 +74,8 @@ void setup() {
     pinMode(LED_BLUE, OUTPUT);
     setLEDState("waiting");
 
-    pinMode(relayPin, OUTPUT);
-    digitalWrite(relayPin, HIGH);
+    pinMode(RELAY_PIN, OUTPUT);
+    digitalWrite(RELAY_PIN, HIGH);  // HIGH = Relay OFF (active-LOW relay)
     Serial.println("✔ Relay initialized (OFF)");
 
     pinMode(BUZZER_PIN, OUTPUT);
@@ -179,13 +185,13 @@ void startRace() {
 
     tone(BUZZER_PIN, 1000, 200);
 
-    digitalWrite(relayPin, LOW);
+    digitalWrite(RELAY_PIN, LOW);  // LOW = Relay ON
     startTime = millis();
     raceStarted = true;
     car1Finished = false;
     car2Finished = false;
-    delay(100);
-    digitalWrite(relayPin, HIGH);
+    delay(250);  // Increased delay to 250ms to ensure relay has time to actuate
+    digitalWrite(RELAY_PIN, HIGH);  // HIGH = Relay OFF
     Serial.println("✔ Relay deactivated");
 
     carsLoaded = false;
@@ -223,7 +229,7 @@ void checkFinish() {
 
     if (dist2 < 150 && !car2Finished) {
         car2Time = millis() - startTime;
-        car2Time = (car2Time > 17) ? car2Time - 17 : 0;  // Subtract 17ms to account for sensor timing offset
+       // car2Time = (car2Time > 17) ? car2Time - 17 : 0;  // Subtract 17ms to account for sensor timing offset
         car2Finished = true;
         Serial.print("🏁 Car 2 Finished! Time: ");
         Serial.print(car2Time);
@@ -240,14 +246,13 @@ void declareWinner() {
 
     tone(BUZZER_PIN, 2000, 500);
 
-    // Check for tie condition (within 1ms of each other)
-    if (abs((long)(car1Time - car2Time)) <= 1) {
-        Serial.println("🤝 It's a tie!");
-    } else if (car1Time < car2Time) {
-        Serial.println("🏆 Car 1 Wins!");
-    } else {
-        Serial.println("🏆 Car 2 Wins!");
-    }
+    if (car1Time < car2Time) {
+      Serial.println("🏆 Car 1 Wins!");
+  } else if (car2Time < car1Time) {
+      Serial.println("🏆 Car 2 Wins!");
+  } else {
+      Serial.println("🤝 It's a tie!");
+  }
 
     Serial.print("📊 RESULT: C1=");
     Serial.print(car1Time);
@@ -255,7 +260,7 @@ void declareWinner() {
     Serial.print(car2Time);
     Serial.println("ms");
 
-    Serial.println("\n🔄 Geting ready for next race...");
+    Serial.println("\n🔄 Getting ready for next race...");
     delay(2000);
     setLEDState("finished");
     raceStarted = false;
