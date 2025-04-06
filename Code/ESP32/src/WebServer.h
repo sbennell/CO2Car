@@ -5,6 +5,7 @@
 #include <LittleFS.h>
 #include <ArduinoJson.h>
 #include <vector>
+#include "RaceHistory.h"
 
 // Function pointer type for command handler
 typedef void (*CommandHandler)(const char* command);
@@ -25,8 +26,10 @@ private:
     AsyncWebSocket ws;
     std::vector<AsyncWebSocketClient*> clients;
     CommandHandler commandHandler;
+    RaceHistory raceHistory;
     void onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                          AwsEventType type, void *arg, uint8_t *data, size_t len);
     void setupRoutes();
     void broadcastJson(const JsonDocument& doc);
+    void sendRaceHistory(AsyncWebSocketClient *client);
 };

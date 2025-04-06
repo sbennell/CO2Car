@@ -41,7 +41,7 @@ WebServer webServer;
 VL53L0X sensor1;
 VL53L0X sensor2;
 
-#define DEBUG false
+#define DEBUG true
 
 // WiFi Configuration
 const char* ssid = "Network";
@@ -131,6 +131,10 @@ void setup() {
     Serial.begin(115200);
     Serial.println("\n--- CO₂ Car Race Timer ---");
     Serial.println("Initializing system...");
+
+    // Initialize LEDC for buzzer
+    ledcSetup(0, 2000, 8);  // Channel 0, 2000 Hz, 8-bit resolution
+    ledcAttachPin(BUZZER_PIN, 0);
 
     // Initialize WiFi
     WiFi.mode(WIFI_STA);
@@ -284,9 +288,9 @@ void startRace() {
     Serial.println("📍 Firing CO₂ Relay...");
 
     // Sound start buzzer
-    digitalWrite(BUZZER_PIN, HIGH);
+    ledcWriteTone(0, 2000);
     delay(100);
-    digitalWrite(BUZZER_PIN, LOW);
+    ledcWrite(0, 0);
     
     // Fire the relay (active LOW)
     digitalWrite(RELAY_PIN, LOW);
@@ -345,7 +349,9 @@ void checkFinish() {
 void declareWinner() {
     Serial.println("\n🎉 Race Finished!");
 
-    tone(BUZZER_PIN, 2000, 500);
+    ledcWriteTone(0, 2000);
+    delay(500);
+    ledcWrite(0, 0);
 
     if (car1Time < car2Time) {
       Serial.println("🏆 Car 1 Wins!");
@@ -360,6 +366,9 @@ void declareWinner() {
     Serial.print("ms, C2=");
     Serial.print(car2Time);
     Serial.println("ms");
+
+    // Notify race completion to save to history
+    webServer.notifyRaceComplete(car1Time / 1000.0, car2Time / 1000.0);
 
     Serial.println("\n🔄 Getting ready for next race...");
     delay(2000);

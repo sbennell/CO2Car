@@ -130,6 +130,12 @@
                 case 'times':
                     updateTimes(data);
                     break;
+                case 'race_history':
+                    // Clear existing history and add all races
+                    const tbody = document.getElementById('race-history');
+                    tbody.innerHTML = '';
+                    data.races.forEach(race => addRaceHistory(race));
+                    break;
                 case 'race_complete':
                     addRaceHistory(data);
                     break;
@@ -163,7 +169,7 @@
                 data.lane2.toFixed(3);
         };
 
-        const addRaceHistory = (data) => {
+        const addRaceHistory = (race) => {
             const tbody = document.getElementById('race-history');
             const row = tbody.insertRow(0);
             
@@ -172,10 +178,11 @@
             const lane2Cell = row.insertCell(2);
             const winnerCell = row.insertCell(3);
 
-            timeCell.textContent = new Date().toLocaleTimeString();
-            lane1Cell.textContent = data.lane1.toFixed(3);
-            lane2Cell.textContent = data.lane2.toFixed(3);
-            winnerCell.textContent = data.winner === 1 ? 'Lane 1' : 'Lane 2';
+            const raceTime = new Date(race.timestamp * 1000);
+            timeCell.textContent = raceTime.toLocaleTimeString();
+            lane1Cell.textContent = race.lane1.toFixed(3);
+            lane2Cell.textContent = race.lane2.toFixed(3);
+            winnerCell.textContent = `Lane ${race.winner}`;
 
             if (tbody.children.length > 10) {
                 tbody.deleteRow(-1);

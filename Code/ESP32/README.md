@@ -4,7 +4,7 @@
 
 The **CO₂ Car Race Timer** is an automated race timer system designed for CO₂-powered cars. It uses two VL53L0X distance sensors to measure the time taken for each car to cross the finish line. The system integrates a relay to trigger the CO₂ firing mechanism and provides race results based on the fastest time. 
 
-The system features a responsive web interface for remote control and monitoring. Users can load cars and start races through either physical buttons or the web interface. Real-time race status, timing updates, and sensor health are displayed both on the physical device and the web UI.
+The system features a responsive web interface for remote control and monitoring. Users can load cars and start races through either physical buttons or the web interface. Real-time race status, timing updates, and sensor health are displayed both on the physical device and the web UI. Race results are automatically saved and can be viewed in the race history table.
 
 ## Features
 

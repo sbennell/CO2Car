@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [0.7.0] - 2025-04-06
+### Added
+- **Race History**: 
+  - Persistent race history storage using LittleFS
+  - Automatic saving of race results
+  - Display of past race results in web UI
+  - Limit of 50 stored races with automatic cleanup
+
+### Fixed
+- **File System**: 
+  - Improved race history file handling
+  - Better error handling for file operations
+  - Added file validation and auto-repair
+- **Race Results**: 
+  - Proper saving of race times to history
+  - Correct timestamp handling
+  - Fixed race winner determination in history
+
+---
+
 ## [0.6.0] - 2025-04-06
 ### Added
 - **Web Interface**: Added responsive web UI for race control and monitoring

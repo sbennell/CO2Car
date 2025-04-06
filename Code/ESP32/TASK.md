@@ -62,7 +62,12 @@
 - [x] Add mobile-friendly layout
   - [x] Touch-optimized controls
   - [x] Responsive grid layout
-  - [ ] Portrait/landscape modes
+  - [x] Portrait/landscape modes
+- [x] Implement race history
+  - [x] LittleFS storage
+  - [x] Automatic saving
+  - [x] History display
+  - [x] Race cleanup
 - [ ] Create configuration page
   - [ ] WiFi settings
   - [ ] Sensor thresholds
@@ -114,12 +119,12 @@
 - [x] VL53L0X library for sensor communication (pololu/VL53L0X @ ^1.3.1)
 - [x] Timer library for precise timing (using millis())
 - [x] User feedback (RGB LED + Buzzer)
-- [ ] ESPAsyncWebServer for web interface (me-no-dev/ESPAsyncWebServer)
-- [ ] AsyncTCP for WebSocket support (me-no-dev/AsyncTCP)
-- [ ] LittleFS for file system (built-in ESP32)
-- [ ] ArduinoJson for data handling (bblanchon/ArduinoJson @ ^6.21.5)
-- [ ] Bootstrap for responsive UI (served from CDN)
-- [ ] Chart.js for race timing visualization (served from CDN)
+- [x] ESPAsyncWebServer for web interface (me-no-dev/ESPAsyncWebServer)
+- [x] AsyncTCP for WebSocket support (me-no-dev/AsyncTCP)
+- [x] LittleFS for file system (built-in ESP32)
+- [x] ArduinoJson for data handling (bblanchon/ArduinoJson @ ^6.21.5)
+- [x] Bootstrap for responsive UI (served from CDN)
+- [x] Chart.js for race timing visualization (served from CDN)
 
 ### Main Program Components
 - [x] Sensor reading module (dual VL53L0X with unique addresses)
