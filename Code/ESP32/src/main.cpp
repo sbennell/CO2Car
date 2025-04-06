@@ -4,21 +4,28 @@ This system uses two VL53L0X distance sensors to time a CO₂-powered car race.
 It measures the time taken for each car to cross the sensor line and declares the winner based on the fastest time.
 
 Features:
-- Two distance sensors (VL53L0X) track the progress of two cars.
-- Relay control to simulate the CO₂ firing mechanism.
-- Serial communication to start the race and display results.
-- Supports multiple races by resetting after each one.
-- RGB LED indicator to show current race state (waiting, ready, racing, finished).
-- Buzzer feedback at race start and finish for audible cues.
-- Debounced physical buttons for car load and race start.
+- Two distance sensors (VL53L0X) track the progress of two cars
+- Relay control to simulate the CO₂ firing mechanism
+- Web interface for remote race control and monitoring
+- Real-time race status and timing updates via WebSocket
+- Race history storage with up to 50 past races
+- RGB LED indicator for race state (waiting, ready, racing, finished)
+- Buzzer feedback at race start and finish
+- Debounced physical buttons for local control
 
 ESP32 Pin Assignments:
 - I2C: SDA=GPIO21, SCL=GPIO22
 - VL53L0X Sensors: XSHUT1=GPIO16, XSHUT2=GPIO17
 - Buttons: LOAD=GPIO4, START=GPIO5
-- Relay: GPIO14
+- Relay: GPIO14 (active LOW)
 - Buzzer: GPIO27
 - RGB LED: RED=GPIO25, GREEN=GPIO26, BLUE=GPIO33
+
+Web Interface:
+- Real-time race status and timing display
+- Remote load and start controls
+- Race history table with past results
+- System status indicators (WiFi, sensors)
 */
 
 #include <Wire.h>
