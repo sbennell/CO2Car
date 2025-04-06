@@ -1,5 +1,5 @@
 /*
---- CO₂ Car Race Timer Version 0.6.0 ESP32 - 06 April 2025 ---
+--- CO₂ Car Race Timer Version 0.7.0 ESP32 - 06 April 2025 ---
 This system uses two VL53L0X distance sensors to time a CO₂-powered car race.
 It measures the time taken for each car to cross the sensor line and declares the winner based on the fastest time.
 
