@@ -6,7 +6,7 @@
 - [x] Set up ESP32 development environment (Arduino IDE or PlatformIO)
 - [x] Test basic ESP32 functionality with blink sketch
 - [x] Configure necessary libraries for ESP32
-- [ ] Test WiFi connectivity for DerbyNet communication
+- [x] Test WiFi connectivity for web interface
 
 ### Sensor Setup
 - [x] Connect first GY-VL53L0XV2 sensor to ESP32
@@ -41,60 +41,98 @@
 - [x] Develop finish detection and timing capture
 - [x] Add race result storage functionality
 
-### DerbyNet Integration
-- [ ] Study DerbyNet timer protocol documentation
-- [ ] Implement HTTP client for DerbyNet communication
-- [ ] Create timer protocol handler
-- [ ] Implement race start command reception
-- [ ] Develop result reporting functionality
-- [ ] Test with DerbyNet server
-- [ ] Handle error conditions and retry mechanisms
-- [ ] Implement timer discovery protocol
+
+### Web Interface
+- [x] Set up ESP32 as web server
+  - [x] Configure AsyncWebServer
+  - [x] Set up WebSocket server
+  - [x] Initialize LittleFS for web files
+- [x] Create responsive web UI with:
+  - [x] Race status display (waiting/ready/racing/finished)
+  - [x] Start/Load controls with button feedback
+  - [x] Real-time race timing display
+  - [x] Race history table with past results
+  - [x] WiFi signal strength indicator
+  - [x] System status indicators (sensors, relay)
+- [x] Implement WebSocket features:
+  - [x] Real-time sensor readings
+  - [x] Race state updates
+  - [x] Finish time broadcasts
+  - [x] Connection status monitoring
+- [x] Add mobile-friendly layout
+  - [x] Touch-optimized controls
+  - [x] Responsive grid layout
+  - [ ] Portrait/landscape modes
+- [ ] Create configuration page
+  - [ ] WiFi settings
+  - [ ] Sensor thresholds
+  - [ ] Race timing parameters
+  - [ ] System calibration
+- [ ] Implement offline functionality
+  - [ ] Cache static assets
+  - [ ] Local race history storage
+  - [ ] Reconnection handling
 
 ### User Interface
-- [ ] Add local display support (if using external display)
-- [ ] Create user interface for standalone race control
-- [ ] Implement status indicators for DerbyNet connection
+- [x] LED status indicators
+- [x] Button controls for local operation
 - [ ] Add configuration options for network settings
 
 ### Testing & Optimization
-- [ ] Test timing accuracy
-- [ ] Optimize sensor detection reliability
-- [ ] Test complete race sequence with DerbyNet
-- [ ] Debug and fix communication issues
-- [ ] Test system resilience to network interruptions
+- [ ] Core System Testing
+  - [ ] Timing accuracy verification
+  - [ ] Sensor detection reliability
+  - [ ] Relay activation timing
+  - [ ] LED state transitions
+  - [ ] Button debouncing
+
+- [ ] Web Interface Testing
+  - [ ] Page load performance (<500ms)
+  - [ ] WebSocket latency (<50ms)
+  - [ ] Race timing accuracy display
+  - [ ] Mobile responsiveness
+  - [ ] Touch input reliability
+  - [ ] Cross-browser compatibility
+
+- [ ] Network Testing
+  - [ ] WiFi connection stability
+  - [ ] Reconnection handling
+  - [ ] Offline mode functionality
+  - [ ] WebSocket reconnection
+  - [ ] Data persistence
+
+- [ ] Performance Optimization
+  - [ ] Minimize web asset sizes
+  - [ ] Optimize WebSocket messages
+  - [ ] Reduce memory usage
+  - [ ] Cache static content
+  - [ ] Compress data transfers
 
 ## Code Structure Tasks
 
 ### Libraries to Implement
 - [x] VL53L0X library for sensor communication (pololu/VL53L0X @ ^1.3.1)
 - [x] Timer library for precise timing (using millis())
-- [ ] WiFiClient/HTTPClient for DerbyNet communication
 - [x] User feedback (RGB LED + Buzzer)
-- [x] JSON library for DerbyNet data handling (ArduinoJson @ ^6.21.3)
+- [ ] ESPAsyncWebServer for web interface (me-no-dev/ESPAsyncWebServer)
+- [ ] AsyncTCP for WebSocket support (me-no-dev/AsyncTCP)
+- [ ] LittleFS for file system (built-in ESP32)
+- [ ] ArduinoJson for data handling (bblanchon/ArduinoJson @ ^6.21.5)
+- [ ] Bootstrap for responsive UI (served from CDN)
+- [ ] Chart.js for race timing visualization (served from CDN)
 
 ### Main Program Components
 - [x] Sensor reading module (dual VL53L0X with unique addresses)
-- [x] Race control state machine (waiting, ready, racing, finished)
+- [x] Race control module (start/finish/timing)
 - [x] Timer functionality module (millisecond precision)
-- [ ] DerbyNet client module
+- [ ] Web server module
+  - [ ] HTTP request handlers
+  - [ ] WebSocket server
+  - [ ] File system for web assets
 - [ ] Network connectivity manager
+  - [ ] WiFi configuration portal
+  - [ ] Connection recovery
 - [x] User interface module (LED states + button control)
-
-## DerbyNet Testing Tasks
-
-### DerbyNet Server Setup
-- [ ] Install DerbyNet on a local server
-- [ ] Configure DerbyNet for CO2 car racing
-- [ ] Set up test race data
-- [ ] Configure lanes and track settings
-
-### Integration Testing
-- [ ] Test timer discovery by DerbyNet
-- [ ] Test race start commands
-- [ ] Test result reporting
-- [ ] Test full race sequence
-- [ ] Test error handling and recovery
 
 ## Documentation Tasks
 
@@ -102,13 +140,11 @@
 - [ ] Add detailed comments to code
 - [ ] Create function documentation
 - [ ] Document pin connections and hardware setup
-- [ ] Document DerbyNet communication protocol implementation
 - [ ] Create user manual for operation
 
 ### Project Documentation
 - [ ] Document final design
 - [ ] Create wiring diagram
-- [ ] Document DerbyNet integration steps
 - [ ] Document calibration procedure
 - [ ] Create troubleshooting guide for common issues
 - [ ] Create network setup guide
@@ -125,5 +161,4 @@
 - [ ] Conduct full system test with CO2 cars
 - [ ] Test edge cases (simultaneous finishes, false triggers)
 - [ ] Test system reliability over multiple races
-- [ ] Test DerbyNet integration under varying network conditions
 - [ ] Test system recovery from network interruptions

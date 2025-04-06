@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [0.6.0] - 2025-04-06
+### Added
+- **Web Interface**: Added responsive web UI for race control and monitoring
+- **WebSocket Integration**: Real-time updates for race status, times, and sensor states
+- **LittleFS Support**: Auto-formatting and proper static file serving
+- **Race History**: Track and display previous race results
+
+### Changed
+- **Command Handling**: Improved WebSocket command processing with proper callback system
+- **Relay Control**: Fixed relay timing to only fire during race start, not during load
+- **Status Updates**: Added real-time sensor health monitoring
+- **LED States**: Web interface now reflects the same LED states as the physical device
+
+### Fixed
+- **File System**: Added auto-formatting for corrupted LittleFS
+- **Static Files**: Improved static file serving with proper MIME types
+- **WebSocket Events**: Fixed command handling and status updates
+
+---
+
 ## [0.5.0] - 2025-04-06
 ### Added
 - **ESP32 Migration**: Successfully ported the entire codebase from Arduino UNO to ESP32

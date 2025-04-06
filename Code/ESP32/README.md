@@ -4,18 +4,24 @@
 
 The **CO₂ Car Race Timer** is an automated race timer system designed for CO₂-powered cars. It uses two VL53L0X distance sensors to measure the time taken for each car to cross the finish line. The system integrates a relay to trigger the CO₂ firing mechanism and provides race results based on the fastest time. 
 
-The system ensures that the race cannot start until both cars are loaded, which can be triggered by a button or serial command. Once the race starts, the system tracks each car's progress and declares the winner once both cars cross the finish line.
+The system features a responsive web interface for remote control and monitoring. Users can load cars and start races through either physical buttons or the web interface. Real-time race status, timing updates, and sensor health are displayed both on the physical device and the web UI.
 
 ## Features
 
-- **Two VL53L0X distance sensors**: Tracks the cars as they pass through the sensor line.
-- **Relay control**: Fires the CO₂ mechanism to start the race.
-- **Load detection**: Requires cars to be loaded before the race can start, using a button or serial command.
-- **Race result output**: Displays the time taken for each car to complete the race and declares a winner.
-- **Button press handling**: Supports momentary switches for load and start buttons, with proper edge detection.
-- **Debug logging**: Optionally outputs sensor distance readings for troubleshooting.
-- **LED indicators**: Visual feedback of race state (waiting, ready, racing, finished).
-- **Buzzer feedback**: Audible cues at race start and finish.
+### Hardware Features
+- **Two VL53L0X distance sensors**: Tracks the cars as they pass through the sensor line
+- **Relay control**: Fires the CO₂ mechanism to start the race
+- **Physical controls**: Load and start buttons with proper debouncing
+- **LED indicators**: Visual feedback of race state (waiting, ready, racing, finished)
+- **Buzzer feedback**: Audible cues at race start and finish
+
+### Web Interface Features
+- **Responsive design**: Mobile-friendly interface with touch controls
+- **Real-time updates**: Live race status and timing information
+- **Race history**: Track and display previous race results
+- **System monitoring**: WiFi signal strength and sensor health indicators
+- **Remote control**: Load cars and start races from any device
+- **WebSocket communication**: Instant updates without page refreshes
 
 ## Hardware Requirements
 
@@ -60,6 +66,15 @@ The system ensures that the race cannot start until both cars are loaded, which 
    - Install the PlatformIO extension
 
 2. **Required Libraries**: The following libraries are automatically managed by PlatformIO:
+   - `pololu/VL53L0X`: Distance sensor control
+   - `me-no-dev/ESPAsyncWebServer`: Web server functionality
+   - `me-no-dev/AsyncTCP`: WebSocket support
+   - `bblanchon/ArduinoJson`: JSON data handling
+
+3. **Web Interface Setup**:
+   - Connect to the ESP32's WiFi access point
+   - Navigate to the ESP32's IP address in a web browser
+   - Use the web interface to control and monitor races
    ```ini
    lib_deps =
      pololu/VL53L0X @ ^1.3.1

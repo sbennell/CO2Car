@@ -1,5 +1,5 @@
 /*
---- CO₂ Car Race Timer Version 0.5.0 ESP32 - 06 April 2025 ---
+--- CO₂ Car Race Timer Version 0.6.0 ESP32 - 06 April 2025 ---
 This system uses two VL53L0X distance sensors to time a CO₂-powered car race.
 It measures the time taken for each car to cross the sensor line and declares the winner based on the fastest time.
 
@@ -23,17 +23,32 @@ ESP32 Pin Assignments:
 
 #include <Wire.h>
 #include <VL53L0X.h>
+#include <WiFi.h>
+#include <ArduinoJson.h>
+#include "WebServer.h"
 
 // Function prototypes
 void setLEDState(String state);
 void startRace();
 void checkFinish();
 void declareWinner();
+void connectToWiFi();
+void handleWebSocketCommand(const char* command);
+
+// Global WebServer instance
+WebServer webServer;
 
 VL53L0X sensor1;
 VL53L0X sensor2;
 
 #define DEBUG false
+
+// WiFi Configuration
+const char* ssid = "Network";
+const char* password = "Had2much!";
+bool wifiConnected = false;
+unsigned long lastWifiCheck = 0;
+const unsigned long WIFI_CHECK_INTERVAL = 5000;  // Check WiFi every 5 seconds
 
 // Pin Definitions
 #define LOAD_BUTTON_PIN 4
@@ -61,10 +76,71 @@ bool carsLoaded = false;
 bool startButtonPressed = false;
 bool startButtonLastState = HIGH;
 
+void connectToWiFi() {
+    if (WiFi.status() == WL_CONNECTED) return;
+
+    Serial.print("\n📡 Connecting to WiFi: ");
+    Serial.println(ssid);
+    
+    WiFi.begin(ssid, password);
+
+    int attempts = 0;
+    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
+        delay(500);
+        Serial.print(".");
+        attempts++;
+    }
+
+    if (WiFi.status() == WL_CONNECTED) {
+        wifiConnected = true;
+        Serial.println("\n✅ Connected!");
+        Serial.print("📍 IP: ");
+        Serial.println(WiFi.localIP());
+    } else {
+        wifiConnected = false;
+        Serial.println("\n❌ Connection failed");
+        WiFi.disconnect();
+    }
+}
+
+void checkWiFiStatus() {
+    if (millis() - lastWifiCheck >= WIFI_CHECK_INTERVAL) {
+        lastWifiCheck = millis();
+        
+        if (WiFi.status() != WL_CONNECTED) {
+            wifiConnected = false;
+            Serial.println("\n🔄 WiFi disconnected, reconnecting...");
+            connectToWiFi();
+        }
+    }
+}
+
+void handleWebSocketCommand(const char* command) {
+    if (strcmp(command, "load") == 0 && !carsLoaded) {
+        carsLoaded = true;
+        setLEDState("ready");
+        webServer.notifyStatus("Ready");
+        Serial.println("🚦 Cars loaded. Ready to start!");
+    }
+    else if (strcmp(command, "start") == 0 && carsLoaded && !raceStarted) {
+        startRace();
+    }
+}
+
 void setup() {
     Serial.begin(115200);
     Serial.println("\n--- CO₂ Car Race Timer ---");
     Serial.println("Initializing system...");
+
+    // Initialize WiFi
+    WiFi.mode(WIFI_STA);
+    connectToWiFi();
+    
+    // Initialize web server
+    if (wifiConnected) {
+        webServer.setCommandHandler(handleWebSocketCommand);
+        webServer.begin();
+    }
 
     Wire.begin(21, 22);  // SDA = 21, SCL = 22
     delay(100);
@@ -121,6 +197,27 @@ void setup() {
 }
 
 void loop() {
+    // Check WiFi status
+    static unsigned long lastWifiCheck = 0;
+    static unsigned long lastSensorCheck = 0;
+    
+    if (millis() - lastWifiCheck > 5000) {  // Check every 5 seconds
+        lastWifiCheck = millis();
+        if (WiFi.status() != WL_CONNECTED) {
+            wifiConnected = false;
+            Serial.println("\n🔄 WiFi disconnected, reconnecting...");
+            connectToWiFi();
+        }
+    }
+    
+    // Update sensor status every second
+    if (millis() - lastSensorCheck > 1000) {
+        lastSensorCheck = millis();
+        bool sensor1Ok = sensor1.readRangeContinuousMillimeters() != 65535;
+        bool sensor2Ok = sensor2.readRangeContinuousMillimeters() != 65535;
+        webServer.notifySensorStates(sensor1Ok, sensor2Ok);
+    }
+
     bool loadButtonState = digitalRead(LOAD_BUTTON_PIN);
     bool startButtonState = digitalRead(START_BUTTON_PIN);
 
@@ -129,6 +226,7 @@ void loop() {
         if (!carsLoaded) {
             carsLoaded = true;
             setLEDState("ready");
+            webServer.notifyStatus("Ready");
             Serial.println("🚦 Cars loaded. Press 'S' to start the race.");
         }
     }
@@ -180,18 +278,32 @@ void loop() {
 }
 
 void startRace() {
+    if (!carsLoaded || raceStarted) return;
+    
     Serial.println("\n🚦 Race Starting...");
-    Serial.println("🔹 Firing CO₂ Relay...");
+    Serial.println("📍 Firing CO₂ Relay...");
 
-    tone(BUZZER_PIN, 1000, 200);
-
-    digitalWrite(RELAY_PIN, LOW);  // LOW = Relay ON
-    startTime = millis();
+    // Sound start buzzer
+    digitalWrite(BUZZER_PIN, HIGH);
+    delay(100);
+    digitalWrite(BUZZER_PIN, LOW);
+    
+    // Fire the relay (active LOW)
+    digitalWrite(RELAY_PIN, LOW);
+    delay(250);  // 250ms activation time per requirements
+    digitalWrite(RELAY_PIN, HIGH);
+    
+    // Start the race
+    setLEDState("racing");
     raceStarted = true;
     car1Finished = false;
     car2Finished = false;
-    delay(250);  // Increased delay to 250ms to ensure relay has time to actuate
-    digitalWrite(RELAY_PIN, HIGH);  // HIGH = Relay OFF
+    car1Time = 0;
+    car2Time = 0;
+    startTime = millis();
+    
+    // Update web interface
+    webServer.notifyTimes(0, 0);
     Serial.println("✔ Relay deactivated");
 
     carsLoaded = false;
@@ -199,41 +311,30 @@ void startRace() {
 }
 
 void checkFinish() {
+    if (!raceStarted) return;
+    
+    // Check sensor readings
     int dist1 = sensor1.readRangeContinuousMillimeters();
     int dist2 = sensor2.readRangeContinuousMillimeters();
-
-    if (dist1 == -1) {
-        Serial.println("❌ Error reading from Sensor 1");
-        return;
-    }
-    if (dist2 == -1) {
-        Serial.println("❌ Error reading from Sensor 2");
-        return;
-    }
-
-    if (DEBUG) {
-        Serial.print("📏 Sensor Readings: C1 = ");
-        Serial.print(dist1);
-        Serial.print(" mm, C2 = ");
-        Serial.print(dist2);
-        Serial.println(" mm");
-    }
-
-    if (dist1 < 150 && !car1Finished) {
+    
+    if (!car1Finished && dist1 < 150) {
         car1Time = millis() - startTime;
         car1Finished = true;
         Serial.print("🏁 Car 1 Finished! Time: ");
         Serial.print(car1Time);
         Serial.println(" ms");
+        webServer.notifyTimes(car1Time / 1000.0, car2Time / 1000.0);
     }
-
-    if (dist2 < 150 && !car2Finished) {
+    
+    if (!car2Finished && dist2 < 150) {
         car2Time = millis() - startTime;
-       // car2Time = (car2Time > 17) ? car2Time - 17 : 0;  // Subtract 17ms to account for sensor timing offset
+        // Apply 17ms timing offset compensation for sensor 2
+        car2Time = (car2Time > 17) ? car2Time - 17 : 0;
         car2Finished = true;
         Serial.print("🏁 Car 2 Finished! Time: ");
         Serial.print(car2Time);
         Serial.println(" ms");
+        webServer.notifyTimes(car1Time / 1000.0, car2Time / 1000.0);
     }
 
     if (car1Finished && car2Finished) {
@@ -272,18 +373,25 @@ void setLEDState(String state) {
         digitalWrite(LED_RED, HIGH);
         digitalWrite(LED_GREEN, LOW);
         digitalWrite(LED_BLUE, LOW);
-    } else if (state == "ready") {
+        webServer.notifyStatus("Waiting");
+    }
+    else if (state == "ready") {
         digitalWrite(LED_RED, HIGH);
         digitalWrite(LED_GREEN, HIGH);
         digitalWrite(LED_BLUE, LOW);
-    } else if (state == "racing") {
+        webServer.notifyStatus("Ready");
+    }
+    else if (state == "racing") {
         digitalWrite(LED_RED, LOW);
         digitalWrite(LED_GREEN, LOW);
         digitalWrite(LED_BLUE, HIGH);
-    } else if (state == "finished") {
+        webServer.notifyStatus("Racing");
+    }
+    else if (state == "finished") {
         digitalWrite(LED_RED, LOW);
         digitalWrite(LED_GREEN, HIGH);
         digitalWrite(LED_BLUE, LOW);
+        webServer.notifyStatus("Finished");
     } else {
         digitalWrite(LED_RED, LOW);
         digitalWrite(LED_GREEN, LOW);
