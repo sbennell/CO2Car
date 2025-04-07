@@ -1,7 +1,9 @@
 #include "WebServer.h"
 #include "Version.h"
 
-WebServer::WebServer(TimeManager& tm, Configuration& cfg) : server(80), ws("/ws"), commandHandler(nullptr), timeManager(tm), raceHistory(tm), config(cfg) {}
+WebServer::WebServer(TimeManager& tm, Configuration& cfg, NetworkManager& nm) 
+    : server(80), ws("/ws"), commandHandler(nullptr), 
+      timeManager(tm), raceHistory(tm), config(cfg), networkManager(nm) {}
 
 void WebServer::begin() {
     if (!LittleFS.begin(false)) {  // First try without formatting
@@ -113,90 +115,64 @@ void WebServer::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *c
                                AwsEventType type, void *arg, uint8_t *data, size_t len) {
     switch (type) {
         case WS_EVT_CONNECT: {
-            Serial.printf("📱 WebSocket client #%u connected\n", client->id());
+            Serial.printf("🔗 WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
+            
+            // Add client to our list
             clients.push_back(client);
+            
+            // Send initial configuration
             sendVersionInfo(client);
             sendRaceHistory(client);
+            sendNetworkInfo(client);
             break;
         }
             
         case WS_EVT_DISCONNECT: {
-            Serial.printf("📱 WebSocket client #%u disconnected\n", client->id());
-            clients.erase(std::remove(clients.begin(), clients.end(), client), clients.end());
+            Serial.printf("🔕 WebSocket client #%u disconnected\n", client->id());
+            
+            // Remove client from our list
+            clients.erase(std::remove_if(clients.begin(), clients.end(),
+                [client](AsyncWebSocketClient* c) { return c->id() == client->id(); }),
+                clients.end());
             break;
         }
             
         case WS_EVT_DATA: {
             AwsFrameInfo *info = (AwsFrameInfo*)arg;
             if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
-                data[len] = 0;
-                String message = (char*)data;
-                DynamicJsonDocument doc(1024);
+                // Ensure null termination
+                char *message = new char[len + 1];
+                memcpy(message, data, len);
+                message[len] = '\0';
+                
+                // Parse JSON message
+                StaticJsonDocument<512> doc;
                 DeserializationError error = deserializeJson(doc, message);
+                
                 if (error) {
                     Serial.print("❌ deserializeJson() failed: ");
                     Serial.println(error.c_str());
+                    delete[] message;
                     return;
                 }
-
-                const char* command = doc["command"];
-                if (strcmp(command, "test") == 0) {
-                    // Send test response
-                    DynamicJsonDocument response(1024);
-                    response["type"] = "test_response";
-                    response["message"] = "WebSocket is working!";
-                    String jsonResponse;
-                    serializeJson(response, jsonResponse);
-                    client->text(jsonResponse);
-                } else if (strcmp(command, "get_config") == 0) {
-                    // Send current configuration
-                    StaticJsonDocument<512> response;
-                    response["type"] = "config";
-                    response["wifi"]["ssid"] = config.getWiFiSSID();
-                    response["wifi"]["password"] = config.getWiFiPassword();
-                    response["sensor"]["threshold"] = config.getSensorThreshold();
-                    response["timing"]["relay_ms"] = config.getRelayActivationTime();
-                    response["timing"]["tie_threshold"] = config.getTieThreshold();
-
-                    String output;
-                    serializeJson(response, output);
-                    client->text(output);
-                } else if (strcmp(command, "set_config") == 0) {
-                    // Update configuration
-                    const char* section = doc["section"];
-                    if (strcmp(section, "wifi") == 0) {
-                        config.setWiFiCredentials(
-                            doc["data"]["ssid"] | "",
-                            doc["data"]["password"] | ""
-                        );
-                    } else if (strcmp(section, "sensor") == 0) {
-                        config.setSensorThreshold(doc["data"]["threshold"] | 150);
-                    } else if (strcmp(section, "timing") == 0) {
-                        config.setRelayActivationTime(doc["data"]["relay_ms"] | 250);
-                        config.setTieThreshold(doc["data"]["tie_threshold"] | 0.002);
-
-                    }
-                    
-                    // Send confirmation
-                    StaticJsonDocument<64> response;
-                    response["type"] = "config_saved";
-                    String output;
-                    serializeJson(response, output);
-                    client->text(output);
-                } else if (commandHandler) {
-                    commandHandler(command);
-                }
+                
+                // Process the message
+                handleWebSocketMessage(client, message);
+                
+                // Clean up
+                delete[] message;
             }
             break;
         }
             
-        default:
+        case WS_EVT_ERROR:
+            Serial.printf("❌ WebSocket client #%u error(%u): %s\n", client->id(), *((uint16_t*)arg), (char*)data);
             break;
     }
 }
 
 void WebServer::handleWebSocketMessage(AsyncWebSocketClient *client, const char *data) {
-    StaticJsonDocument<200> doc;
+    StaticJsonDocument<512> doc;
     DeserializationError error = deserializeJson(doc, data);
     
     if (error) {
@@ -205,7 +181,58 @@ void WebServer::handleWebSocketMessage(AsyncWebSocketClient *client, const char 
     }
     
     const char* command = doc["command"];
-    if (strcmp(command, "get_history") == 0) {
+    if (strcmp(command, "get_network_status") == 0) {
+        sendNetworkInfo(client);
+    }
+    else if (strcmp(command, "get_config") == 0) {
+        StaticJsonDocument<512> configDoc;
+        configDoc["type"] = "config";
+        JsonObject wifi = configDoc.createNestedObject("wifi");
+        wifi["ssid"] = config.getWiFiSSID();
+        wifi["password"] = config.getWiFiPassword();
+        
+        JsonObject sensor = configDoc.createNestedObject("sensor");
+        sensor["threshold"] = config.getSensorThreshold();
+        
+        JsonObject timing = configDoc.createNestedObject("timing");
+        timing["relay_ms"] = config.getRelayActivationTime();
+        timing["tie_threshold"] = config.getTieThreshold();
+        
+        String output;
+        serializeJson(configDoc, output);
+        client->text(output);
+    }
+    else if (strcmp(command, "set_config") == 0) {
+        const char* section = doc["section"];
+        JsonObject data = doc["data"];
+        
+        if (strcmp(section, "wifi") == 0) {
+            config.setWiFiCredentials(data["ssid"], data["password"]);
+            networkManager.reconnect();
+            
+            // Send success response
+            StaticJsonDocument<64> response;
+            response["type"] = "config_saved";
+            String output;
+            serializeJson(response, output);
+            client->text(output);
+        }
+        else if (strcmp(section, "sensor") == 0) {
+            config.setSensorThreshold(data["threshold"]);
+        }
+        else if (strcmp(section, "timing") == 0) {
+            config.setRelayActivationTime(data["relay_ms"]);
+            config.setTieThreshold(data["tie_threshold"]);
+        }
+        
+        // Send success response
+        StaticJsonDocument<64> response;
+        response["type"] = "config_saved";
+        String output;
+        serializeJson(response, output);
+        client->text(output);
+    }
+    else if (strcmp(command, "get_history") == 0) {
         StaticJsonDocument<4096> historyDoc;
         StaticJsonDocument<4096> racesDoc;
         raceHistory.getHistory(racesDoc);
@@ -274,14 +301,46 @@ void WebServer::notifyRaceComplete(float lane1, float lane2) {
 void WebServer::broadcastJson(const JsonDocument& doc) {
     String output;
     serializeJson(doc, output);
+    Serial.print("📣 Broadcasting: ");
+    Serial.println(output);
     
+    // Clean up disconnected clients first
+    clients.erase(std::remove_if(clients.begin(), clients.end(),
+        [](AsyncWebSocketClient* c) { return c->status() != WS_CONNECTED; }),
+        clients.end());
+    
+    // Send to all connected clients
     for (auto client : clients) {
-        if (client->status() == WS_CONNECTED) {
-            client->text(output);
-        }
+        client->text(output);
     }
 }
 
 void WebServer::setCommandHandler(CommandHandler handler) {
     commandHandler = handler;
+}
+
+void WebServer::sendNetworkInfo(AsyncWebSocketClient *client) {
+    StaticJsonDocument<200> doc;
+    doc["type"] = "network_status";
+    doc["mode"] = networkManager.isAPMode() ? "AP" : "Station";
+    doc["connected"] = networkManager.isConnected();
+    doc["ssid"] = networkManager.getSSID();
+    doc["ip"] = networkManager.getIP();
+    doc["rssi"] = networkManager.getRSSI();
+    
+    String output;
+    serializeJson(doc, output);
+    client->text(output);
+}
+
+void WebServer::notifyNetworkStatus() {
+    StaticJsonDocument<200> doc;
+    doc["type"] = "network_status";
+    doc["mode"] = networkManager.isAPMode() ? "AP" : "Station";
+    doc["connected"] = networkManager.isConnected();
+    doc["ssid"] = networkManager.getSSID();
+    doc["ip"] = networkManager.getIP();
+    doc["rssi"] = networkManager.getRSSI();
+    
+    broadcastJson(doc);
 }

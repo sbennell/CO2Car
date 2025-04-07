@@ -56,6 +56,12 @@
   - [x] Configure AsyncWebServer
   - [x] Set up WebSocket server
   - [x] Initialize LittleFS for web files
+- [x] Implement Access Point (AP) fallback mode
+  - [x] Create AP if WiFi connection fails
+  - [x] Set up DNS for captive portal
+  - [x] Configure AP with unique SSID (CO2RaceTimer-XXXX)
+  - [x] Add AP status indicator to web interface
+  - [x] Auto-switch between AP and Station modes
 - [x] Create responsive web UI with:
   - [x] Race status display (waiting/ready/racing/finished)
   - [x] Start/Load controls with button feedback
@@ -64,8 +70,8 @@
   - [x] WiFi signal strength indicator
   - [x] System status indicators (sensors, relay)
   - [x] Version display in web interface
-    - [x] Show version on initial page load
-    - [x] Add version to system status section
+  - [x] Show version on initial page load
+  - [x] Add version to system status section
 - [x] Implement WebSocket features:
   - [x] Real-time sensor readings
   - [x] Race state updates
@@ -112,11 +118,11 @@
   - [ ] Touch input reliability
   - [ ] Cross-browser compatibility
 
-- [ ] Network Testing
-  - [ ] WiFi connection stability
-  - [ ] Reconnection handling
+- [x] Network Testing
+  - [x] WiFi connection stability
+  - [x] Reconnection handling
   - [ ] Offline mode functionality
-  - [ ] WebSocket reconnection
+  - [x] WebSocket reconnection
   - [ ] Data persistence
 
 - [ ] Performance Optimization
@@ -132,12 +138,92 @@
 - [x] VL53L0X library for sensor communication (pololu/VL53L0X @ ^1.3.1)
 - [x] Timer library for precise timing (using millis())
 - [x] User feedback (RGB LED + Buzzer)
+
+### SD Card Implementation
+- [ ] Set up SD card storage system
+  - [ ] Initialize SD card module
+  - [ ] Test read/write operations
+  - [ ] Implement error handling for card failures
+  - [ ] Create backup/restore functionality
+
+- [ ] Data Storage Features
+  - [ ] Extended race history storage
+    - [ ] Detailed race data logging
+    - [ ] CSV export functionality
+    - [ ] Race statistics generation
+  - [ ] System configuration backup
+    - [ ] Save/load configuration files
+    - [ ] Multiple configuration profiles
+  - [ ] Diagnostic logging
+    - [ ] System event logging
+    - [ ] Error tracking
+    - [ ] Performance metrics
+
+- [ ] SD Card Management
+  - [ ] Implement file rotation for logs
+  - [ ] Storage space monitoring
+  - [ ] Data cleanup utilities
+  - [ ] Safe card ejection handling
 - [x] ESPAsyncWebServer for web interface (me-no-dev/ESPAsyncWebServer)
 - [x] AsyncTCP for WebSocket support (me-no-dev/AsyncTCP)
 - [x] LittleFS for file system (built-in ESP32)
 - [x] ArduinoJson for data handling (bblanchon/ArduinoJson @ ^6.21.5)
 - [x] Bootstrap for responsive UI (served from CDN)
 - [x] Chart.js for race timing visualization (served from CDN)
+
+## Race Management System
+
+### Race Scheduling
+- [ ] Implement Young and Pope "Partial Perfect-N" charts
+  - [ ] Create race schedule generator
+  - [ ] Support variable number of racers
+  - [ ] Calculate optimal heat assignments
+  - [ ] Generate round-robin matchups
+
+### Real-time Standings
+- [ ] Implement standings calculation system
+  - [ ] Track points per racer
+  - [ ] Calculate rankings
+  - [ ] Update standings in real-time
+  - [ ] Display race progression
+
+### Race Operations Interface
+- [ ] Create "On Deck" display system
+  - [ ] Show upcoming races
+  - [ ] Display next racers
+  - [ ] Highlight lane assignments
+  - [ ] Add preparation countdown
+
+### Check-in System
+- [ ] Implement racer check-in functionality
+  - [ ] Digital check-in interface
+  - [ ] Real-time check-in status updates
+  - [ ] "Please Check-In" display
+  - [ ] Automated notifications
+  - [ ] Check-in deadline management
+
+### Race Data Management
+- [ ] Create participant database
+  - [ ] Racer profiles
+  - [ ] Race history per participant
+  - [ ] Performance statistics
+- [ ] Implement results tracking
+  - [ ] Heat results
+  - [ ] Round summaries
+  - [ ] Tournament progression
+- [ ] Results Export System
+  - [ ] Spreadsheet export functionality
+    - [ ] Individual race results
+    - [ ] Complete tournament data
+    - [ ] Participant statistics
+  - [ ] Multiple format support
+    - [ ] Excel (.xlsx)
+    - [ ] CSV format
+    - [ ] Google Sheets compatible
+  - [ ] Custom report templates
+    - [ ] Race summary reports
+    - [ ] Participant performance reports
+    - [ ] Tournament brackets
 
 ### Main Program Components
 - [x] Sensor reading module (dual VL53L0X with unique addresses)

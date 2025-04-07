@@ -19,12 +19,16 @@ All notable changes to this project will be documented in this file.
   - Offline time persistence
   - Configurable timezone support
   - Time settings storage in preferences
+  - Improved WiFi configuration handling
+  - Network reconnection after settings update
 
 ### Changed
 - Improved sensor detection logic for high-speed operation
 - Enhanced version tracking with build information
 - Added feature flags for capability tracking
 - Updated documentation with high-speed testing capabilities
+- Optimized WiFi settings update workflow
+- Fixed WiFi configuration response handling
 
 ---
 

@@ -32,8 +32,8 @@ Web Interface:
 
 #include <Wire.h>
 #include <VL53L0X.h>
-#include <WiFi.h>
 #include <ArduinoJson.h>
+#include "NetworkManager.h"
 #include "WebServer.h"
 #include "Version.h"
 #include "TimeManager.h"
@@ -50,15 +50,12 @@ void handleWebSocketCommand(const char* command);
 // Global instances
 TimeManager timeManager;
 Configuration config;
-WebServer webServer(timeManager, config);
+NetworkManager networkManager(config);
+WebServer webServer(timeManager, config, networkManager);
 VL53L0X sensor1;
 VL53L0X sensor2;
 
 #define DEBUG true
-
-bool wifiConnected = false;
-unsigned long lastWifiCheck = 0;
-const unsigned long WIFI_CHECK_INTERVAL = 5000;  // Check WiFi every 5 seconds
 
 // Pin Definitions
 #define LOAD_BUTTON_PIN 4
@@ -86,48 +83,7 @@ bool carsLoaded = false;
 bool startButtonPressed = false;
 bool startButtonLastState = HIGH;
 
-void connectToWiFi() {
-    if (WiFi.status() == WL_CONNECTED) return;
 
-    Serial.print("\n📱 Connecting to WiFi: ");
-    Serial.println(config.getWiFiSSID());
-    
-    WiFi.begin(config.getWiFiSSID().c_str(), config.getWiFiPassword().c_str());
-
-    int attempts = 0;
-    while (WiFi.status() != WL_CONNECTED && attempts < 20) {
-        delay(500);
-        Serial.print(".");
-        attempts++;
-    }
-
-    if (WiFi.status() == WL_CONNECTED) {
-        wifiConnected = true;
-        Serial.println("\n✅ Connected!");
-        Serial.print("📍 IP: ");
-        Serial.println(WiFi.localIP());
-        
-        // Initialize NTP after WiFi connection
-        Serial.print("🕒 Synchronizing NTP time");
-        timeManager.begin();
-    } else {
-        wifiConnected = false;
-        Serial.println("\n❌ Connection failed");
-        WiFi.disconnect();
-    }
-}
-
-void checkWiFiStatus() {
-    if (millis() - lastWifiCheck >= WIFI_CHECK_INTERVAL) {
-        lastWifiCheck = millis();
-        
-        if (WiFi.status() != WL_CONNECTED) {
-            wifiConnected = false;
-            Serial.println("\n🔄 WiFi disconnected, reconnecting...");
-            connectToWiFi();
-        }
-    }
-}
 
 void handleWebSocketCommand(const char* command) {
     if (strcmp(command, "load") == 0 && !carsLoaded) {
@@ -155,15 +111,18 @@ void setup() {
     ledcSetup(0, 2000, 8);  // Channel 0, 2000 Hz, 8-bit resolution
     ledcAttachPin(BUZZER_PIN, 0);
 
-    // Initialize WiFi
-    WiFi.mode(WIFI_STA);
-    connectToWiFi();
+    // Initialize network
+    networkManager.begin();
+    
+    // Initialize NTP if connected in station mode
+    if (networkManager.isConnected() && !networkManager.isAPMode()) {
+        Serial.print("🕒 Synchronizing NTP time");
+        timeManager.begin();
+    }
     
     // Initialize web server
-    if (wifiConnected) {
-        webServer.setCommandHandler(handleWebSocketCommand);
-        webServer.begin();
-    }
+    webServer.setCommandHandler(handleWebSocketCommand);
+    webServer.begin();
 
     Wire.begin(21, 22);  // SDA = 21, SCL = 22
     delay(100);
@@ -220,19 +179,9 @@ void setup() {
 }
 
 void loop() {
-    checkWiFiStatus();
+    networkManager.update();
     timeManager.update();
-    static unsigned long lastWifiCheck = 0;
     static unsigned long lastSensorCheck = 0;
-    
-    if (millis() - lastWifiCheck > 5000) {  // Check every 5 seconds
-        lastWifiCheck = millis();
-        if (WiFi.status() != WL_CONNECTED) {
-            wifiConnected = false;
-            Serial.println("\n🔄 WiFi disconnected, reconnecting...");
-            connectToWiFi();
-        }
-    }
     
     // Update sensor status every second
     if (millis() - lastSensorCheck > 1000) {
@@ -294,6 +243,13 @@ void loop() {
         } else if (command == 'S' && !carsLoaded) {
             Serial.println("⚠ Please load the cars first by pressing 'L' or pressing the load button.");
         }
+    }
+
+    // Update network status every 5 seconds
+    static unsigned long lastNetworkCheck = 0;
+    if (millis() - lastNetworkCheck >= 5000) {
+        lastNetworkCheck = millis();
+        webServer.notifyNetworkStatus();
     }
 
     if (raceStarted) {

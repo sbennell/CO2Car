@@ -19,6 +19,39 @@
         </header>
 
         <div class="row g-4">
+            <!-- Network Status -->
+            <div class="col-md-6">
+                <div class="card">
+                    <div class="card-header">
+                        <h5 class="card-title mb-0">Network Status</h5>
+                    </div>
+                    <div class="card-body">
+                        <div class="mb-3">
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <strong>Mode:</strong>
+                                <span id="network-mode" class="badge bg-primary">Station</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <strong>Status:</strong>
+                                <span id="network-status" class="badge bg-success">Connected</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <strong>SSID:</strong>
+                                <span id="network-ssid">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center mb-2">
+                                <strong>IP Address:</strong>
+                                <span id="network-ip">-</span>
+                            </div>
+                            <div class="d-flex justify-content-between align-items-center">
+                                <strong>Signal Strength:</strong>
+                                <span id="network-rssi">-</span>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
             <!-- WiFi Settings -->
             <div class="col-md-6">
                 <div class="card">
@@ -104,8 +137,9 @@
             ws = new WebSocket(`ws://${window.location.hostname}/ws`);
             
             ws.onopen = () => {
-                // Request current configuration
+                // Request current configuration and network status
                 ws.send(JSON.stringify({command: 'get_config'}));
+                ws.send(JSON.stringify({command: 'get_network_status'}));
             };
             
             ws.onclose = () => {
@@ -120,6 +154,21 @@
 
         const handleWebSocketMessage = (data) => {
             switch(data.type) {
+                case 'network_status':
+                    // Update network status card
+                    document.getElementById('network-mode').textContent = data.mode;
+                    document.getElementById('network-mode').className = `badge ${data.mode === 'AP' ? 'bg-warning' : 'bg-primary'}`;
+                    
+                    document.getElementById('network-status').textContent = data.connected ? 'Connected' : 'Disconnected';
+                    document.getElementById('network-status').className = `badge ${data.connected ? 'bg-success' : 'bg-danger'}`;
+                    
+                    document.getElementById('network-ssid').textContent = data.ssid || '-';
+                    document.getElementById('network-ip').textContent = data.ip || '-';
+                    
+                    // Only show RSSI for station mode
+                    const rssi = data.mode === 'Station' ? `${data.rssi} dBm` : 'N/A';
+                    document.getElementById('network-rssi').textContent = rssi;
+                    break;
                 case 'version':
                     const versionText = `v${data.version} (${data.buildDate})`;
                     document.getElementById('version-info').textContent = versionText;

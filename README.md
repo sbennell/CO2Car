@@ -24,6 +24,10 @@ The system features a responsive web interface for remote control and monitoring
 - **Remote control**: Load cars and start races from any device
 - **WebSocket communication**: Instant updates without page refreshes
 - **Tie handling**: Shows identical times for tied races
+- **Dual Network Mode**:
+  - **Station Mode**: Connects to existing WiFi network
+  - **AP Mode**: Creates its own network (SSID: CO2RaceTimer-XXXX, Password: co2racer) when WiFi unavailable
+  - **Auto-switching**: Falls back to AP mode if WiFi connection fails
 
 #### Web Interface Screenshots
 
@@ -81,9 +85,19 @@ The system features a responsive web interface for remote control and monitoring
    - `me-no-dev/AsyncTCP`: WebSocket support
    - `bblanchon/ArduinoJson`: JSON data handling
 
-3. **Web Interface Setup**:
-   - Connect to the ESP32's WiFi access point
-   - Navigate to the ESP32's IP address in a web browser
+3. **Network Setup**:
+   - **Station Mode** (Default):
+     - Device will attempt to connect to configured WiFi network
+     - Configure WiFi credentials through web interface
+   - **AP Mode** (Fallback):
+     - If WiFi connection fails, device creates its own network
+     - SSID: `CO2RaceTimer-XXXX` (XXXX = last 4 digits of MAC)
+     - Password: `co2racer`
+     - IP Address: 192.168.4.1
+
+4. **Web Interface Setup**:
+   - Connect to either your WiFi network or the device's AP
+   - Navigate to the device's IP address in a web browser
    - Use the web interface to control and monitor races
    ```ini
    lib_deps =
