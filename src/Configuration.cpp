@@ -11,6 +11,12 @@ Configuration::Configuration() :
 {}
 
 void Configuration::begin() {
+    // Don't try to access files if LittleFS isn't mounted
+    if (!LittleFS.begin(false)) {
+        Serial.println("❌ LittleFS not mounted, using default configuration");
+        return;
+    }
+    
     if (!LittleFS.exists(CONFIG_FILE)) {
         Serial.println("📄 Creating new configuration file...");
         saveToFile();

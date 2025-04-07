@@ -17,16 +17,22 @@ public:
     void reconnect();  // Force reconnect with current config
 
 private:
-    void startAP();
+    static const char* AP_PASSWORD;
+    static const unsigned long CHECK_INTERVAL = 5000;  // Check connection every 5 seconds
+    static const unsigned long CONNECT_TIMEOUT = 15000;  // 15 seconds timeout for connection
+    
     void startStation();
+    void startAP();
     void checkConnection();
     String generateAPName();
-
+    void onWiFiEvent(WiFiEvent_t event);
+    
     Configuration& config;
-    DNSServer dnsServer;
     bool apMode;
     bool connected;
+    bool connecting;
     unsigned long lastCheck;
-    const unsigned long CHECK_INTERVAL = 5000;  // Check every 5 seconds
-    const char* AP_PASSWORD = "co2racer";       // Simple password for AP mode
+    unsigned long connectStartTime;
+    DNSServer dnsServer;
+    WiFiEventId_t eventId;
 };

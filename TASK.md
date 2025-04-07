@@ -123,7 +123,7 @@
   - [x] Reconnection handling
   - [ ] Offline mode functionality
   - [x] WebSocket reconnection
-  - [ ] Data persistence
+  - [x] Data persistence
 
 - [ ] Performance Optimization
   - [ ] Minimize web asset sizes
@@ -233,9 +233,9 @@
   - [ ] HTTP request handlers
   - [ ] WebSocket server
   - [ ] File system for web assets
-- [ ] Network connectivity manager
-  - [ ] WiFi configuration portal
-  - [ ] Connection recovery
+- [x] Network connectivity manager
+  - [x] WiFi configuration portal
+  - [x] Connection recovery
 - [x] User interface module (LED states + button control)
 
 ## Documentation Tasks

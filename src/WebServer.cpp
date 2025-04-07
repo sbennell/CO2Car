@@ -145,17 +145,6 @@ void WebServer::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *c
                 memcpy(message, data, len);
                 message[len] = '\0';
                 
-                // Parse JSON message
-                StaticJsonDocument<512> doc;
-                DeserializationError error = deserializeJson(doc, message);
-                
-                if (error) {
-                    Serial.print("❌ deserializeJson() failed: ");
-                    Serial.println(error.c_str());
-                    delete[] message;
-                    return;
-                }
-                
                 // Process the message
                 handleWebSocketMessage(client, message);
                 
@@ -176,11 +165,19 @@ void WebServer::handleWebSocketMessage(AsyncWebSocketClient *client, const char 
     DeserializationError error = deserializeJson(doc, data);
     
     if (error) {
-        Serial.println("❌ Error parsing WebSocket message");
+        Serial.print("❌ Error parsing WebSocket message: ");
+        Serial.println(error.c_str());
+        Serial.print("Message was: ");
+        Serial.println(data);
         return;
     }
     
     const char* command = doc["command"];
+    if (!command) {
+        Serial.println("❌ No command in message");
+        return;
+    }
+
     if (strcmp(command, "get_network_status") == 0) {
         sendNetworkInfo(client);
     }
@@ -204,7 +201,15 @@ void WebServer::handleWebSocketMessage(AsyncWebSocketClient *client, const char 
     }
     else if (strcmp(command, "set_config") == 0) {
         const char* section = doc["section"];
+        if (!section) {
+            Serial.println("❌ No section in set_config message");
+            return;
+        }
         JsonObject data = doc["data"];
+        if (data.isNull()) {
+            Serial.println("❌ No data in set_config message");
+            return;
+        }
         
         if (strcmp(section, "wifi") == 0) {
             config.setWiFiCredentials(data["ssid"], data["password"]);
@@ -250,8 +255,12 @@ void WebServer::handleWebSocketMessage(AsyncWebSocketClient *client, const char 
         serializeJson(response, output);
         client->text(output);
     }
-    else if (command && commandHandler) {
+    else if (strcmp(command, "load") == 0 || strcmp(command, "start") == 0) {
         commandHandler(command);
+    }
+    else {
+        Serial.print("❌ Unknown command: ");
+        Serial.println(command);
     }
 }
 

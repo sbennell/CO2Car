@@ -4,6 +4,15 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [0.8.1] - 2025-04-08
+### Fixed
+- **WiFi Stability**: Improved WiFi connection handling to prevent watchdog timer issues
+  - Added non-blocking async WiFi event handling
+  - Better cleanup between connection attempts
+  - More robust reconnection logic
+  - Proper state transitions between WiFi and AP modes
+- **File System**: Fixed initialization order to ensure LittleFS is mounted before accessing configuration files
+
 ## [0.8.0] - 2025-04-07
 ### Added
   - Optimized sensor detection for high-speed passes

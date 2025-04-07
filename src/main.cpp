@@ -100,10 +100,7 @@ void handleWebSocketCommand(const char* command) {
 void setup() {
     Serial.begin(115200);
     Serial.println("\n=== CO₂ Car Race Timer ===");
-    
-    // Initialize configuration
-    config.begin();
-    Serial.printf("Version: %s (Built: %s)\n", VERSION_STRING, BUILD_DATE);
+    Serial.printf("Version: %s (Built: %s)\n", "0.8.1", "08-04-2025");
     Serial.println("=========================");
     Serial.println("Initializing system...");
 
@@ -120,9 +117,12 @@ void setup() {
         timeManager.begin();
     }
     
-    // Initialize web server
+    // Initialize web server (this will mount LittleFS)
     webServer.setCommandHandler(handleWebSocketCommand);
     webServer.begin();
+    
+    // Initialize configuration (after LittleFS is mounted)
+    config.begin();
 
     Wire.begin(21, 22);  // SDA = 21, SCL = 22
     delay(100);

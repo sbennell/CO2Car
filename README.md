@@ -25,9 +25,10 @@ The system features a responsive web interface for remote control and monitoring
 - **WebSocket communication**: Instant updates without page refreshes
 - **Tie handling**: Shows identical times for tied races
 - **Dual Network Mode**:
-  - **Station Mode**: Connects to existing WiFi network
+  - **Station Mode**: Connects to existing WiFi network with robust reconnection
   - **AP Mode**: Creates its own network (SSID: CO2RaceTimer-XXXX, Password: co2racer) when WiFi unavailable
   - **Auto-switching**: Falls back to AP mode if WiFi connection fails
+  - **Async Events**: Non-blocking WiFi handling for improved stability
 
 #### Web Interface Screenshots
 
