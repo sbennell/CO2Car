@@ -4,6 +4,55 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [0.8.3] - 2025-04-08
+### Added
+- Real-time tie detection during races
+- Debug logging for tie adjustments
+
+### Changed
+- Improved tie detection logic:
+  - Moved tie detection to real-time during race
+  - Uses consistent tie threshold across all components
+  - Averages times for ties when detected
+  - Simplified winner declaration logic
+
+### Fixed
+- **Race Timing**: Improved tie handling consistency
+  - Eliminated redundant tie checks
+  - Fixed potential timing inconsistencies
+  - Better handling of near-simultaneous finishes
+  - More accurate tie detection in real-time
+
+---
+
+## [0.8.2] - 2025-04-08
+### Added
+- Improved documentation of network modes
+- Added AP mode password to README
+- Updated network setup instructions
+- **Network Status**: Enhanced network status reporting
+  - Added connection state monitoring
+  - Improved error feedback
+  - Real-time status updates
+
+### Changed
+- Enhanced network mode documentation in web interface
+- Clarified AP mode fallback behavior
+
+### Fixed
+- **WiFi Configuration**: Improved WiFi credential handling
+  - Removed hardcoded default credentials
+  - Added proper validation
+  - Improved error handling
+  - Fixed reconnection issues
+- **Configuration Management**:
+  - More reliable config file loading
+  - Better verification of loaded settings
+  - Improved debug output for WiFi status
+  - Immediate persistence of new settings
+
+---
+
 ## [0.8.1] - 2025-04-08
 ### Fixed
 - **WiFi Stability**: Improved WiFi connection handling to prevent watchdog timer issues

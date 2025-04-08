@@ -109,6 +109,7 @@
   - [x] LED state transitions
   - [x] Button debouncing
   - [x] Fair tie detection with 2ms tolerance
+  - [x] Real-time tie detection and handling
 
 - [ ] Web Interface Testing
   - [ ] Page load performance (<500ms)
@@ -121,6 +122,8 @@
 - [x] Network Testing
   - [x] WiFi connection stability
   - [x] Reconnection handling
+  - [x] WiFi credential management
+  - [x] AP mode transitions
   - [ ] Offline mode functionality
   - [x] WebSocket reconnection
   - [x] Data persistence
@@ -251,7 +254,7 @@
 - [ ] Create wiring diagram
 - [ ] Document calibration procedure
 - [ ] Create troubleshooting guide for common issues
-- [ ] Create network setup guide
+- [x] Create network setup guide
 
 ## Testing Tasks
 

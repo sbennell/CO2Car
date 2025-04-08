@@ -2,6 +2,8 @@
 
 #include <WiFi.h>
 #include <DNSServer.h>
+#include <esp_wifi.h>
+#include <time.h>
 #include "Configuration.h"
 
 class NetworkManager {
@@ -19,7 +21,7 @@ public:
 private:
     static const char* AP_PASSWORD;
     static const unsigned long CHECK_INTERVAL = 5000;  // Check connection every 5 seconds
-    static const unsigned long CONNECT_TIMEOUT = 15000;  // 15 seconds timeout for connection
+    static const unsigned long CONNECT_TIMEOUT = 30000;  // 30 seconds timeout for connection
     
     void startStation();
     void startAP();

@@ -1,5 +1,6 @@
 #include "WebServer.h"
 #include "Version.h"
+#include "Debug.h"
 
 WebServer::WebServer(TimeManager& tm, Configuration& cfg, NetworkManager& nm) 
     : server(80), ws("/ws"), commandHandler(nullptr), 
@@ -310,8 +311,22 @@ void WebServer::notifyRaceComplete(float lane1, float lane2) {
 void WebServer::broadcastJson(const JsonDocument& doc) {
     String output;
     serializeJson(doc, output);
-    Serial.print("📣 Broadcasting: ");
-    Serial.println(output);
+    
+    // Always print important events, only print routine updates if DEBUG is true
+    const char* type = doc["type"];
+    if (type && (
+        strcmp(type, "race_complete") == 0 || 
+        strcmp(type, "status") == 0 || 
+        strcmp(type, "error") == 0 ||
+        (DEBUG && (
+            strcmp(type, "sensors") == 0 ||
+            strcmp(type, "times") == 0 ||
+            strcmp(type, "network") == 0
+        ))
+    )) {
+        Serial.print("📣 Broadcasting: ");
+        Serial.println(output);
+    }
     
     // Clean up disconnected clients first
     clients.erase(std::remove_if(clients.begin(), clients.end(),

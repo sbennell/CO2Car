@@ -1,5 +1,5 @@
 /*
---- CO₂ Car Race Timer Version 0.8.0 ESP32 - 07 April 2025 ---
+--- CO₂ Car Race Timer Version 0.8.3 ESP32 - 08 April 2025 ---
 This system uses two VL53L0X distance sensors to time a CO₂-powered car race.
 It measures the time taken for each car to cross the sensor line and declares the winner based on the fastest time.
 
@@ -38,6 +38,7 @@ Web Interface:
 #include "Version.h"
 #include "TimeManager.h"
 #include "Configuration.h"
+#include "Debug.h"
 
 // Function prototypes
 void setLEDState(String state);
@@ -54,8 +55,6 @@ NetworkManager networkManager(config);
 WebServer webServer(timeManager, config, networkManager);
 VL53L0X sensor1;
 VL53L0X sensor2;
-
-#define DEBUG true
 
 // Pin Definitions
 #define LOAD_BUTTON_PIN 4
@@ -100,7 +99,7 @@ void handleWebSocketCommand(const char* command) {
 void setup() {
     Serial.begin(115200);
     Serial.println("\n=== CO₂ Car Race Timer ===");
-    Serial.printf("Version: %s (Built: %s)\n", "0.8.1", "08-04-2025");
+    Serial.printf("Version: %s (Built: %s)\n", "0.8.3", "08-04-2025");
     Serial.println("=========================");
     Serial.println("Initializing system...");
 
@@ -293,25 +292,68 @@ void startRace() {
 void checkFinish() {
     if (!raceStarted) return;
     
-    // Check sensor readings
+    // Read both sensors first to get readings as close together as possible
     int dist1 = sensor1.readRangeContinuousMillimeters();
     int dist2 = sensor2.readRangeContinuousMillimeters();
+    unsigned long currentTime = millis();
+    bool finishedThisCheck = false;
     
-    if (!car1Finished && dist1 < config.getSensorThreshold()) {
-        car1Time = millis() - startTime;
-        car1Finished = true;
-        Serial.print("🏁 Car 1 Finished! Time: ");
-        Serial.print(car1Time);
-        Serial.println(" ms");
-        webServer.notifyTimes(car1Time / 1000.0, car2Time / 1000.0);
+    // Check both sensors before updating times to handle simultaneous finishes
+    bool car1CrossedLine = !car1Finished && dist1 < config.getSensorThreshold();
+    bool car2CrossedLine = !car2Finished && dist2 < config.getSensorThreshold();
+    
+    // If both cars cross the line within the tie threshold window, consider it simultaneous
+    if (car1CrossedLine && car2CrossedLine) {
+        car1Time = currentTime - startTime;
+        car2Time = currentTime - startTime;
+        car1Finished = car2Finished = true;
+        finishedThisCheck = true;
+        
+        Serial.println("🏁 Both cars finished simultaneously!");
+        Serial.printf("Time: %lu ms\n", car1Time);
+    } else {
+        // Handle individual finishes
+        if (car1CrossedLine) {
+            car1Time = currentTime - startTime;
+            car1Finished = true;
+            finishedThisCheck = true;
+            Serial.printf("🏁 Car 1 Finished! Time: %lu ms\n", car1Time);
+            
+            // If car 2 already finished, check for tie based on threshold
+            if (car2Finished) {
+                int timeDiff = abs((int)car1Time - (int)car2Time);
+                if (timeDiff <= (config.getTieThreshold() * 1000)) {
+                    // For ties, use the average of both times
+                    unsigned long avgTime = (car1Time + car2Time) / 2;
+                    car1Time = car2Time = avgTime;
+                    Serial.println("⚖️ Times within threshold - adjusted to tie!");
+                    Serial.printf("Adjusted time: %lu ms\n", avgTime);
+                }
+            }
+        }
+        
+        if (car2CrossedLine) {
+            car2Time = currentTime - startTime;
+            car2Finished = true;
+            finishedThisCheck = true;
+            Serial.printf("🏁 Car 2 Finished! Time: %lu ms\n", car2Time);
+            
+            // If car 1 already finished, check for tie based on threshold
+            if (car1Finished) {
+                int timeDiff = abs((int)car1Time - (int)car2Time);
+                if (timeDiff <= (config.getTieThreshold() * 1000)) {
+                    // For ties, use the average of both times
+                    unsigned long avgTime = (car1Time + car2Time) / 2;
+                    car1Time = car2Time = avgTime;
+                    Serial.println("⚖️ Times within threshold - adjusted to tie!");
+                    Serial.printf("Adjusted time: %lu ms\n", avgTime);
+                }
+            }
+        }
     }
     
-    if (!car2Finished && dist2 < config.getSensorThreshold()) {
-        car2Time = millis() - startTime;
-        car2Finished = true;
-        Serial.print("🏁 Car 2 Finished! Time: ");
-        Serial.print(car2Time);
-        Serial.println(" ms");
+    // Only update web interface if something changed
+    if (finishedThisCheck) {
         webServer.notifyTimes(car1Time / 1000.0, car2Time / 1000.0);
     }
 
@@ -327,12 +369,9 @@ void declareWinner() {
     delay(500);
     ledcWrite(0, 0);
 
-    // Consider times within tie threshold of each other as a tie
-    int timeDiff = abs((int)car1Time - (int)car2Time);
-    if (timeDiff <= (config.getTieThreshold() * 1000)) {
-        // For ties, use the average of both times
-        float avgTime = (car1Time + car2Time) / 2;
-        car1Time = car2Time = avgTime;
+    // Times have already been adjusted for ties in checkFinish()
+    // Just determine the winner based on final times
+    if (car1Time == car2Time) {
         Serial.println("🤝 It's a tie!");
     } else if (car1Time < car2Time) {
         Serial.println("🏆 Car 1 Wins!");

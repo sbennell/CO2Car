@@ -3,8 +3,8 @@
 const char* Configuration::CONFIG_FILE = "/config.json";
 
 Configuration::Configuration() :
-    wifiSSID("Network"),
-    wifiPassword("Had2much!"),
+    wifiSSID(""),
+    wifiPassword(""),
     sensorThreshold(150),
     relayActivationTime(250),
     tieThreshold(0.002)
@@ -22,13 +22,21 @@ void Configuration::begin() {
         saveToFile();
     } else {
         loadFromFile();
+        // Verify loaded configuration
+        Serial.print("📱 Verifying WiFi SSID: ");
+        Serial.println(wifiSSID);
     }
+    
+    // Save configuration to ensure format is current
+    saveToFile();
 }
 
 void Configuration::setWiFiCredentials(const String& ssid, const String& password) {
     wifiSSID = ssid;
     wifiPassword = password;
-    save();
+    saveToFile();  // Call saveToFile directly to ensure immediate persistence
+    Serial.print("✅ WiFi credentials saved - SSID: ");
+    Serial.println(wifiSSID);
 }
 
 void Configuration::setSensorThreshold(int threshold) {
@@ -56,6 +64,7 @@ void Configuration::loadFromFile() {
     File file = LittleFS.open(CONFIG_FILE, "r");
     if (!file) {
         Serial.println("❌ Failed to open config file for reading");
+        saveToFile();  // Create default config file
         return;
     }
     
@@ -66,12 +75,17 @@ void Configuration::loadFromFile() {
     if (error) {
         Serial.print("❌ Failed to parse config file: ");
         Serial.println(error.c_str());
+        saveToFile();  // Create new config file with current settings
         return;
     }
     
-    // Load WiFi settings
-    wifiSSID = doc["wifi"]["ssid"] | wifiSSID;
-    wifiPassword = doc["wifi"]["password"] | wifiPassword;
+    // Load WiFi settings if they exist
+    if (doc["wifi"].containsKey("ssid")) {
+        wifiSSID = doc["wifi"]["ssid"].as<String>();
+    }
+    if (doc["wifi"].containsKey("password")) {
+        wifiPassword = doc["wifi"]["password"].as<String>();
+    }
     
     // Load sensor settings
     sensorThreshold = doc["sensor"]["threshold"] | sensorThreshold;
@@ -80,8 +94,11 @@ void Configuration::loadFromFile() {
     relayActivationTime = doc["timing"]["relay_ms"] | relayActivationTime;
     tieThreshold = doc["timing"]["tie_threshold"] | tieThreshold;
 
-    
     Serial.println("✅ Configuration loaded");
+    
+    // Log loaded WiFi settings
+    Serial.print("📱 Loaded WiFi SSID: ");
+    Serial.println(wifiSSID);
 }
 
 void Configuration::saveToFile() {

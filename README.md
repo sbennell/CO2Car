@@ -14,12 +14,12 @@ The system features a responsive web interface for remote control and monitoring
 - **Physical controls**: Load and start buttons with proper debouncing
 - **LED indicators**: Visual feedback of race state (waiting, ready, racing, finished)
 - **Buzzer feedback**: Audible cues at race start and finish
-- **Fair tie detection**: 2ms tolerance for accurate tie detection
+- **Advanced tie detection**: Real-time detection with 2ms tolerance, consistent handling across all components
 
 ### Web Interface Features
 - **Responsive design**: Mobile-friendly interface with touch controls
 - **Real-time updates**: Live race status and timing information
-- **Race history**: Track and display previous race results with tie detection
+- **Race history**: Track and display previous race results with consistent tie handling
 - **System monitoring**: WiFi signal strength and sensor health indicators
 - **Remote control**: Load cars and start races from any device
 - **WebSocket communication**: Instant updates without page refreshes
@@ -87,14 +87,18 @@ The system features a responsive web interface for remote control and monitoring
    - `bblanchon/ArduinoJson`: JSON data handling
 
 3. **Network Setup**:
-   - **Station Mode** (Default):
-     - Device will attempt to connect to configured WiFi network
-     - Configure WiFi credentials through web interface
-   - **AP Mode** (Fallback):
-     - If WiFi connection fails, device creates its own network
+   - **First Boot**:
+     - Device starts in AP mode for initial setup
      - SSID: `CO2RaceTimer-XXXX` (XXXX = last 4 digits of MAC)
      - Password: `co2racer`
      - IP Address: 192.168.4.1
+   - **WiFi Configuration**:
+     - Connect to the AP and navigate to 192.168.4.1
+     - Use the configuration page to set up WiFi credentials
+     - Device will automatically connect to configured network
+   - **AP Mode Fallback**:
+     - If WiFi connection fails, device reverts to AP mode
+     - Clear settings through web interface to reconfigure
 
 4. **Web Interface Setup**:
    - Connect to either your WiFi network or the device's AP
@@ -168,8 +172,16 @@ After the race, the system will reset and wait for the next race. To reset:
 
 ## Configuration
 
+### Debug Settings
 - **DEBUG Mode**: Set the `#define DEBUG` flag to true in the code to enable detailed debug logging of sensor readings.
 - **Debounce Delay**: The `DEBOUNCE_DELAY` constant (default: 50ms) can be adjusted to fine-tune button responsiveness.
+
+### Race Timing Settings
+- **Tie Threshold**: Configurable threshold (default: 2ms) for detecting ties. Times within this threshold are averaged and considered a tie.
+- **Real-time Detection**: Ties are detected and handled in real-time as cars finish, ensuring consistent timing across all components:
+  - Live race display
+  - Final results
+  - Race history storage
 
 ## License
 
