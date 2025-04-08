@@ -178,7 +178,8 @@ After the race, the system will reset and wait for the next race. To reset:
 
 ### Race Timing Settings
 - **Tie Threshold**: Configurable threshold (default: 2ms) for detecting ties. Times within this threshold are averaged and considered a tie.
-- **Real-time Detection**: Ties are detected and handled in real-time as cars finish, ensuring consistent timing across all components:
+- **Real-time Detection**: Ties are detected and handled in real-time as cars finish, ensuring consistent timing across all components.
+- **Optimized Timing**: Network and time manager updates are paused during races for maximum timing accuracy:
   - Live race display
   - Final results
   - Race history storage

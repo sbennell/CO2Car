@@ -1,5 +1,5 @@
 /*
---- CO₂ Car Race Timer Version 0.8.3 ESP32 - 08 April 2025 ---
+--- CO₂ Car Race Timer Version 0.8.4 ESP32 - 08 April 2025 ---
 This system uses two VL53L0X distance sensors to time a CO₂-powered car race.
 It measures the time taken for each car to cross the sensor line and declares the winner based on the fastest time.
 
@@ -81,6 +81,7 @@ bool loadButtonLastState = HIGH;
 bool carsLoaded = false;
 bool startButtonPressed = false;
 bool startButtonLastState = HIGH;
+bool pauseUpdates = false;
 
 
 
@@ -178,8 +179,10 @@ void setup() {
 }
 
 void loop() {
-    networkManager.update();
-    timeManager.update();
+    if (!pauseUpdates) {
+        networkManager.update();
+        timeManager.update();
+    }
     static unsigned long lastSensorCheck = 0;
     
     // Update sensor status every second
@@ -244,9 +247,9 @@ void loop() {
         }
     }
 
-    // Update network status every 5 seconds
+    // Update network status every 5 seconds when not racing
     static unsigned long lastNetworkCheck = 0;
-    if (millis() - lastNetworkCheck >= 5000) {
+    if (!pauseUpdates && millis() - lastNetworkCheck >= 5000) {
         lastNetworkCheck = millis();
         webServer.notifyNetworkStatus();
     }
@@ -258,7 +261,9 @@ void loop() {
 
 void startRace() {
     if (!carsLoaded || raceStarted) return;
-    
+
+    pauseUpdates = true; // Pause network and time manager updates during race timing
+    raceStarted = true;
     Serial.println("\n🚦 Race Starting...");
     Serial.println("📍 Firing CO₂ Relay...");
 
@@ -363,6 +368,7 @@ void checkFinish() {
 }
 
 void declareWinner() {
+    pauseUpdates = false;
     Serial.println("\n🎉 Race Finished!");
 
     ledcWriteTone(0, 2000);

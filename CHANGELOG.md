@@ -4,6 +4,11 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [0.8.4] - 2025-04-08
+### Changed
+- Optimized race timing accuracy by pausing network and time manager updates during race
+- Improved timing precision by reducing system overhead during critical race timing
+
 ## [0.8.3] - 2025-04-08
 ### Added
 - Real-time tie detection during races
