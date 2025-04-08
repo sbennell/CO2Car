@@ -185,8 +185,8 @@ void loop() {
     }
     static unsigned long lastSensorCheck = 0;
     
-    // Update sensor status every second
-    if (millis() - lastSensorCheck > 1000) {
+    // Update sensor status every second when not racing
+    if (!pauseUpdates && millis() - lastSensorCheck > 1000) {
         lastSensorCheck = millis();
         bool sensor1Ok = sensor1.readRangeContinuousMillimeters() != 65535;
         bool sensor2Ok = sensor2.readRangeContinuousMillimeters() != 65535;
@@ -357,12 +357,9 @@ void checkFinish() {
         }
     }
     
-    // Only update web interface if something changed
-    if (finishedThisCheck) {
-        webServer.notifyTimes(car1Time / 1000.0, car2Time / 1000.0);
-    }
-
     if (car1Finished && car2Finished) {
+        // Send final times and declare winner
+        webServer.notifyTimes(car1Time / 1000.0, car2Time / 1000.0);
         declareWinner();
     }
 }

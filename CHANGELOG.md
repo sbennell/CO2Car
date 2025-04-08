@@ -8,6 +8,8 @@ All notable changes to this project will be documented in this file.
 ### Changed
 - Optimized race timing accuracy by pausing network and time manager updates during race
 - Improved timing precision by reducing system overhead during critical race timing
+- Paused sensor status checks during races for more consistent timing
+- Deferred web notifications until race completion for better timing accuracy
 
 ## [0.8.3] - 2025-04-08
 ### Added
