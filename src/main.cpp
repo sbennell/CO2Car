@@ -315,14 +315,15 @@ void checkFinish() {
         finishedThisCheck = true;
         
         Serial.println("🏁 Both cars finished simultaneously!");
-        Serial.printf("Time: %lu ms\n", car1Time);
+        Serial.printf("🏁 Car 1 Raw Time: %lu ms\n", car1Time);
+        Serial.printf("🏁 Car 2 Raw Time: %lu ms\n", car2Time);
     } else {
         // Handle individual finishes
         if (car1CrossedLine) {
             car1Time = currentTime - startTime;
             car1Finished = true;
             finishedThisCheck = true;
-            Serial.printf("🏁 Car 1 Finished! Time: %lu ms\n", car1Time);
+            Serial.printf("🏁 Car 1 Raw Time: %lu ms\n", car1Time);
             
             // If car 2 already finished, check for tie based on threshold
             if (car2Finished) {
@@ -331,8 +332,8 @@ void checkFinish() {
                     // For ties, use the average of both times
                     unsigned long avgTime = (car1Time + car2Time) / 2;
                     car1Time = car2Time = avgTime;
-                    Serial.println("⚖️ Times within threshold - adjusted to tie!");
-                    Serial.printf("Adjusted time: %lu ms\n", avgTime);
+                    Serial.printf("⚖️ Times within %d ms threshold - Car1: %lu ms, Car2: %lu ms\n", config.getTieThreshold() * 1000, car1Time, car2Time);
+                    Serial.printf("Adjusted to tie time: %lu ms\n", avgTime);
                 }
             }
         }
@@ -341,7 +342,7 @@ void checkFinish() {
             car2Time = currentTime - startTime;
             car2Finished = true;
             finishedThisCheck = true;
-            Serial.printf("🏁 Car 2 Finished! Time: %lu ms\n", car2Time);
+            Serial.printf("🏁 Car 2 Raw Time: %lu ms\n", car2Time);
             
             // If car 1 already finished, check for tie based on threshold
             if (car1Finished) {
@@ -350,8 +351,8 @@ void checkFinish() {
                     // For ties, use the average of both times
                     unsigned long avgTime = (car1Time + car2Time) / 2;
                     car1Time = car2Time = avgTime;
-                    Serial.println("⚖️ Times within threshold - adjusted to tie!");
-                    Serial.printf("Adjusted time: %lu ms\n", avgTime);
+                    Serial.printf("⚖️ Times within %d ms threshold - Car1: %lu ms, Car2: %lu ms\n", config.getTieThreshold() * 1000, car1Time, car2Time);
+                    Serial.printf("Adjusted to tie time: %lu ms\n", avgTime);
                 }
             }
         }

@@ -10,6 +10,7 @@ All notable changes to this project will be documented in this file.
 - Improved timing precision by reducing system overhead during critical race timing
 - Paused sensor status checks during races for more consistent timing
 - Deferred web notifications until race completion for better timing accuracy
+- Enhanced timing debug output to show raw times before tie adjustments
 
 ## [0.8.3] - 2025-04-08
 ### Added
