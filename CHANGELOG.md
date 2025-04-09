@@ -4,6 +4,32 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [alpha 0.10.0] - 2025-04-09
+### Added 
+- Race scheduler framework (WIP)
+  - Basic racer management (add/remove)
+  - Racer check-in system
+  - Schedule generation foundation
+  - Race completion tracking
+- Persistent storage for race data (WIP)
+  - Save/load race schedules
+  - Racer information storage
+  - Error recovery mechanisms
+
+### Fixed
+- Improved SD card initialization and reliability
+  - Better error handling for file operations
+  - Write verification for all operations
+  - Proper directory creation and management
+  - Safe file overwrite handling
+- Enhanced WebSocket stability
+  - Fixed queue handling and memory issues
+  - Improved message processing
+  - Better client connection management
+  - Reduced memory fragmentation
+
+---
+
 ## [0.9.1] - 2025-04-09
 ### Changed
 - Switched to local hosting of bootstrap.min.css and bootstrap.bundle.min.js for improved reliability

@@ -178,11 +178,24 @@
 ## Race Management System
 
 ### Race Scheduling
+- [x] Basic racer management
+  - [x] Add/remove racers
+  - [x] Check-in system
+  - [x] Persistent storage
+  - [x] Error handling
+
 - [ ] Implement Young and Pope "Partial Perfect-N" charts
-  - [ ] Create race schedule generator
-  - [ ] Support variable number of racers
+  - [x] Create race schedule generator framework
+  - [x] Support variable number of racers
   - [ ] Calculate optimal heat assignments
   - [ ] Generate round-robin matchups
+  - [ ] Lane balancing algorithm
+
+- [ ] Schedule Management
+  - [x] Save/load schedules
+  - [x] Track race completion
+  - [ ] Handle schedule modifications
+  - [ ] Support schedule resumption
 
 ### Real-time Standings
 - [ ] Implement standings calculation system

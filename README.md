@@ -1,5 +1,7 @@
 # CO₂ Car Race Timer
 
+Version: 0.10.0
+
 ## Description
 
 The **CO₂ Car Race Timer** is an automated race timer system designed for CO₂-powered cars. It uses two VL53L0X distance sensors to measure the time taken for each car to cross the finish line. The system integrates a relay to trigger the CO₂ firing mechanism and provides race results based on the fastest time. 
@@ -17,6 +19,19 @@ The system features a responsive web interface for remote control and monitoring
 - **Advanced tie detection**: Real-time detection with 2ms tolerance, consistent handling across all components
 - **SD Card Storage**: Automatic race logging with detailed JSON data
 
+### Race Management (Alpha)
+- **Racer Registration**: Add and remove racers with unique IDs
+- **Check-in System**: Track racer attendance and participation
+- **Race Scheduling**: Generate optimized race schedules (Work in Progress)
+  - Support for variable number of racers
+  - Track race completion status
+  - Persistent schedule storage
+  - Error recovery and validation
+- **Data Persistence**: 
+  - Save/load race schedules
+  - Racer information storage
+  - Automatic backup and recovery
+
 ### Web Interface Features
 - **Responsive design**: Mobile-friendly interface with touch controls
 - **Real-time updates**: Live race status and timing information
@@ -25,6 +40,11 @@ The system features a responsive web interface for remote control and monitoring
 - **Remote control**: Load cars and start races from any device
 - **WebSocket communication**: Instant updates without page refreshes
 - **Tie handling**: Shows identical times for tied races
+- **Race Management UI** (Alpha):
+  - Racer registration and check-in interface
+  - Dynamic race schedule display
+  - Race progress tracking
+  - Schedule management tools
 - **Dual Network Mode**:
   - **Station Mode**: Connects to existing WiFi network with robust reconnection
   - **AP Mode**: Creates its own network (SSID: CO2RaceTimer-XXXX, Password: co2racer) when WiFi unavailable

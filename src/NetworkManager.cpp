@@ -16,7 +16,18 @@ void NetworkManager::begin() {
     WiFi.disconnect(true, true);  // Full disconnect
     WiFi.mode(WIFI_OFF);    // Turn off WiFi
     yield();
-    delay(100);
+    delay(500);
+    yield();
+    
+    // Reset WiFi subsystem
+    esp_wifi_stop();
+    delay(500);
+    esp_wifi_deinit();
+    delay(500);
+    esp_wifi_init(NULL);
+    delay(500);
+    esp_wifi_start();
+    delay(500);
     yield();
     
     // Ensure configuration is loaded and get credentials
@@ -126,11 +137,21 @@ void NetworkManager::startAP() {
     // Clean stop of any existing mode
     WiFi.disconnect(true, true);  // Disconnect and clear settings
     WiFi.softAPdisconnect(true);
-    delay(100);
+    delay(500);  // Longer delay for cleanup
+    
+    // Reset WiFi
+    esp_wifi_stop();
+    delay(500);
+    esp_wifi_deinit();
+    delay(500);
+    esp_wifi_init(NULL);
+    delay(500);
+    esp_wifi_start();
+    delay(500);
     
     // Start AP mode
     WiFi.mode(WIFI_AP);
-    delay(100);
+    delay(500);
     
     // Generate AP name
     String apName = generateAPName();

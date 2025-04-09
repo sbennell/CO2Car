@@ -29,14 +29,14 @@ Web Interface:
 - Tie detection with identical times display
 */
 
+#include <Arduino.h>
 #include <Wire.h>
 #include <VL53L0X.h>
-#include <ArduinoJson.h>
-#include <SD.h>
 #include <SPI.h>
+#include <SD.h>
+#include "Version.h"
 #include "NetworkManager.h"
 #include "WebServer.h"
-#include "Version.h"
 #include "TimeManager.h"
 #include "Configuration.h"
 #include "Debug.h"
@@ -105,17 +105,50 @@ void handleWebSocketCommand(const char* command) {
 }
 
 bool initSDCard() {
-    if (!SD.begin(SD_CS)) {
-        Serial.println("❌ SD card initialization failed!");
+    // Make sure SPI is initialized first
+    SPI.end();
+    delay(100);
+    SPI.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
+    
+    // Try to initialize SD card with higher frequency first
+    if (!SD.begin(SD_CS, SPI, 16000000)) {
+        Serial.println("⚠️ Failed at 16MHz, trying 4MHz...");
+        SD.end();
+        delay(100);
+        
+        // If that fails, try a lower frequency
+        if (!SD.begin(SD_CS, SPI, 4000000)) {
+            Serial.println("❌ Failed to initialize SD card");
+            return false;
+        }
+    }
+    Serial.println("✅ SD card initialized");
+
+    // Verify we can write to the card
+    File testFile = SD.open("/test.txt", FILE_WRITE);
+    if (!testFile) {
+        Serial.println("❌ Cannot write to SD card");
         return false;
     }
-    Serial.println("✅ SD card initialized.");
-    
-    // Check if race_history directory exists, create if not
-    if (!SD.exists("/race_history")) {
-        SD.mkdir("/race_history");
-        Serial.println("📁 Created race_history directory");
+    testFile.println("test");
+    testFile.close();
+    SD.remove("/test.txt");
+    Serial.println("✅ SD card write test passed");
+
+    // Create required directories with full paths
+    const char* dirs[] = {"/race_data", "/race_history"};
+    for (const char* dir : dirs) {
+        if (!SD.exists(dir)) {
+            if (!SD.mkdir(dir)) {
+                Serial.printf("❌ Failed to create directory: %s\n", dir);
+                return false;
+            }
+            Serial.printf("✅ Created directory: %s\n", dir);
+        } else {
+            Serial.printf("ℹ️ Directory exists: %s\n", dir);
+        }
     }
+
     return true;
 }
 
@@ -152,7 +185,7 @@ bool writeRaceToSD(unsigned long car1Time, unsigned long car2Time, const char* w
 void setup() {
     Serial.begin(115200);
     Serial.println("\n=== CO₂ Car Race Timer ===");
-    Serial.printf("Version: %s (Built: %s)\n", "0.8.3", "08-04-2025");
+    Serial.printf("Version: %s (Built: %s)\n", VERSION_STRING, BUILD_DATE);
     Serial.println("=========================");
     Serial.println("Initializing system...");
 
