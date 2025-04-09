@@ -4,6 +4,13 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [0.9.1] - 2025-04-09
+### Changed
+- Switched to local hosting of bootstrap.min.css and bootstrap.bundle.min.js for improved reliability
+- Removed CDN dependencies for core web interface functionality
+
+---
+
 ## [0.9.0] - 2025-04-09
 ### Added
 - SD card support for race data storage
