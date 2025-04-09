@@ -8,13 +8,14 @@ The system features a responsive web interface for remote control and monitoring
 
 ## Features
 
-### Hardware Features
-- **Two VL53L0X distance sensors**: Tracks the cars as they pass through the sensor line
-- **Relay control**: Fires the CO₂ mechanism to start the race
+### Core Features
+- **Accurate timing**: Millisecond precision with VL53L0X sensors
+- **Tie detection**: Real-time detection with configurable threshold
 - **Physical controls**: Load and start buttons with proper debouncing
 - **LED indicators**: Visual feedback of race state (waiting, ready, racing, finished)
 - **Buzzer feedback**: Audible cues at race start and finish
 - **Advanced tie detection**: Real-time detection with 2ms tolerance, consistent handling across all components
+- **SD Card Storage**: Automatic race logging with detailed JSON data
 
 ### Web Interface Features
 - **Responsive design**: Mobile-friendly interface with touch controls
@@ -47,6 +48,7 @@ The system features a responsive web interface for remote control and monitoring
 - **ESP32**: Manages communication between the sensors, relay, buttons, and the system logic.
 - **Tri-color LED**: Visual indication of system state.
 - **Buzzer**: Provides audible feedback for race events.
+- **SD Card Module**: Stores race history and configuration data.
 
 ## Pinout
 
@@ -57,22 +59,33 @@ The system features a responsive web interface for remote control and monitoring
 | GPIO16    | Sensor 1 XSHUT       | VL53L0X address: 0x30   |
 | GPIO17    | Sensor 2 XSHUT       | VL53L0X address: 0x31   |
 | GPIO4     | Load Button (INPUT)  | With internal pullup    |
-| GPIO5     | Start Button (INPUT) | With internal pullup    |
+| GPIO13    | Start Button (INPUT) | With internal pullup    |
 | GPIO14    | Relay (OUTPUT)       | Active LOW              |
-| GPIO27    | Buzzer (OUTPUT)      | Active HIGH             |
+| GPIO33    | Buzzer (OUTPUT)      | Active HIGH             |
 | GPIO25    | LED Red (OUTPUT)     | Active HIGH             |
 | GPIO26    | LED Green (OUTPUT)   | Active HIGH             |
-| GPIO33    | LED Blue (OUTPUT)    | Active HIGH             |
+| GPIO27    | LED Blue (OUTPUT)    | Active HIGH             |
+| GPIO18    | SD Card SCK          | SPI Clock               |
+| GPIO19    | SD Card MISO         | SPI MISO                |
+| GPIO23    | SD Card MOSI         | SPI MOSI                |
+| GPIO5     | SD Card CS           | SPI Chip Select         |
 
 ## Installation
 
 ### 1. Hardware Setup
 
-- **VL53L0X Sensors**: Connect both sensors to the Arduino Uno via I2C (A4/SDA and A5/SCL pins). Use `XSHUT` pins (Digital 2 and Digital 3) to reset each sensor individually.
-- **Relay Module**: Connect the relay to Digital 8 on the Arduino Uno to trigger the CO₂ mechanism.
-- **Buttons**: Connect the load button to Digital 4 and the start button to Digital 5.
-- **LED**: Connect the tri-color LED to pins 10 (Red), 11 (Green), and 12 (Blue).
-- **Buzzer**: Connect the buzzer to Digital 9.
+- **VL53L0X Sensors**: Connect both sensors to ESP32 via I2C (GPIO21/SDA and GPIO22/SCL). Use `XSHUT` pins (GPIO16 and GPIO17) to reset each sensor individually.
+- **Relay Module**: Connect the relay to GPIO14 to trigger the CO₂ mechanism.
+- **Buttons**: Connect the load button to GPIO4 and the start button to GPIO13.
+- **LED**: Connect the tri-color LED to GPIO25 (Red), GPIO26 (Green), and GPIO27 (Blue).
+- **Buzzer**: Connect the buzzer to GPIO33.
+- **SD Card Module**: Connect to ESP32 via SPI:
+  - SCK: GPIO18
+  - MISO: GPIO19
+  - MOSI: GPIO23
+  - CS: GPIO5
+  - VCC: 3.3V (do not use 5V)
+  - GND: Any GND pin
 
 ### 2. Software Setup
 
@@ -80,11 +93,13 @@ The system features a responsive web interface for remote control and monitoring
    - Install [VS Code](https://code.visualstudio.com/)
    - Install the PlatformIO extension
 
-2. **Required Libraries**: The following libraries are automatically managed by PlatformIO:
-   - `pololu/VL53L0X`: Distance sensor control
-   - `me-no-dev/ESPAsyncWebServer`: Web server functionality
-   - `me-no-dev/AsyncTCP`: WebSocket support
-   - `bblanchon/ArduinoJson`: JSON data handling
+2. **Required Libraries**:
+   - VL53L0X by Pololu
+   - ESPAsyncWebServer by me-no-dev
+   - AsyncTCP by me-no-dev
+   - ArduinoJson by Benoit Blanchon
+   - SD (built-in)
+   - SPI (built-in)
 
 3. **Network Setup**:
    - **First Boot**:

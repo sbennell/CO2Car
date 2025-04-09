@@ -4,6 +4,21 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [0.9.0] - 2025-04-09
+### Added
+- SD card support for race data storage
+- Automatic race history logging to SD card in JSON format
+- Individual race files with timestamps
+- Detailed race data including finish times and winners
+- Graceful fallback when SD card is unavailable
+
+### Changed
+- Moved START button from GPIO5 to GPIO13 to accommodate SD card
+- Added new pin definitions for SD card SPI interface
+- Swapped Buzzer and LED Blue pins:
+  - Buzzer moved to GPIO33 (was GPIO27)
+  - LED Blue moved to GPIO27 (was GPIO33)
+
 ## [0.8.4] - 2025-04-08
 ### Changed
 - Optimized race timing accuracy by pausing network and time manager updates during race
