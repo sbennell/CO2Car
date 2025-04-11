@@ -1,4 +1,14 @@
-# CO₂ Car Race Timer for ESP32-S3
+# CO2 Car Race Timer
+
+**Version: 0.11.5** (2025-04-11)
+
+Latest Changes:
+- Fixed WiFi configuration management
+- Improved network mode switching
+- Enhanced WebSocket status broadcasting
+- Added detailed network logging and logging
+
+ for ESP32-S3
 
 A high-precision dual-lane race timer system for CO₂ powered cars using ESP32-S3 and VL53L0X distance sensors. The system uses FreeRTOS for real-time task management and precise timing control.
 

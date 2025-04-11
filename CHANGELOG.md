@@ -1,8 +1,25 @@
 # CO₂ Car Race Timer for ESP32 – Changelog
 
-All notable changes to this project will be documented in this file.
+## [0.11.5] - 2025-04-12
+### Fixed
+- **WiFi Management**:
+  - Fixed circular dependency between ConfigManager and WifiManager
+  - Improved WiFi mode switching and configuration handling
+  - Enhanced WebSocket status broadcasting
+  - Added detailed logging for network configuration changes
+  - Simplified network configuration updates
 
----
+## [0.11.4] - 2025-04-11
+### Added
+- Configuration web interface with following sections:
+  - Network settings (WiFi mode, SSID, password)
+  - Sensor configuration (detection threshold, sampling rate)
+  - Race settings (start gate timing, tie detection)
+  - System settings (NTP, timezone, logging)
+- Real-time configuration updates via WebSocket
+- Form validation and error handling
+- Success/error notifications
+- Responsive design with Bootstrap
 
 ## [0.11.3] - 2025-04-11
 ### Added

@@ -1,8 +1,8 @@
 /**
  * @file main.cpp
- * @brief Main implementation file for CO2 Car Race Timer
- * @version 0.11.3
- * @date 2025-04-11
+ * @brief Main implementation file for CO2 Car Race Timer for ESP32
+ * @version 0.11.5
+ * @date 2025-04-12
  *
  * This file implements the core functionality of the CO2 Car Race Timer,
  * including sensor management, race timing, and control logic using FreeRTOS.
@@ -12,27 +12,34 @@
  */
 
 #include <Arduino.h>
-#include "version.h"
-#include "storage.h"
-#include "race_types.h"
-#include "pin_config.h"
-#include "freertos/FreeRTOS.h"
-#include "freertos/task.h"
-#include "freertos/queue.h"
-#include "freertos/semphr.h"
 #include <Wire.h>
 #include <SPI.h>
 #include <SD.h>
 #include <SPIFFS.h>
-#include <Adafruit_VL53L0X.h>
 #include <esp_log.h>
+
+// FreeRTOS includes
+#include "freertos/FreeRTOS.h"
+#include "freertos/task.h"
+#include "freertos/queue.h"
+#include "freertos/semphr.h"
+
+// Project includes
+#include "version.h"
+#include "storage.h"
+#include "race_types.h"
+#include "pin_config.h"
+#include "config_manager.h"
+#include "wifi_manager.h"
+
+// Sensor libraries
+#include <Adafruit_VL53L0X.h>
 
 #define LOG_TAG "RACE_TIMER"
 
 // Global objects
 Adafruit_VL53L0X sensor1 = Adafruit_VL53L0X();
 Adafruit_VL53L0X sensor2 = Adafruit_VL53L0X();
-#include "wifi_manager.h"
 
 WifiManager& wifiManager = WifiManager::getInstance();
 
@@ -260,24 +267,28 @@ void raceControlTask(void *pvParameters) {
 }
 
 void webServerTask(void *pvParameters) {
-    // Initialize SPIFFS
-    if (!SPIFFS.begin(true)) {
-        ESP_LOGE(LOG_TAG, "Failed to mount SPIFFS");
-        vTaskDelete(NULL);
+    ESP_LOGI(LOG_TAG, "Starting web server task...");
+    
+    // Get network configuration
+    ConfigManager::NetworkConfig netConfig = ConfigManager::getInstance().getNetworkConfig();
+    
+    // Initialize WiFi manager
+    WifiManager& wifi = WifiManager::getInstance();
+    bool apMode = (netConfig.wifiMode == "ap");
+    const char* ssid = apMode ? netConfig.apSsid.c_str() : netConfig.ssid.c_str();
+    const char* password = apMode ? netConfig.apPassword.c_str() : netConfig.password.c_str();
+    
+    ESP_LOGI(LOG_TAG, "Starting WiFi in %s mode...", apMode ? "AP" : "Station");
+    if (!wifi.begin(ssid, password, apMode)) {
+        ESP_LOGE(LOG_TAG, "Failed to initialize WiFi!");
         return;
     }
-
-    // Initialize WiFi in AP mode
-    if (!wifiManager.begin()) {
-        ESP_LOGE(LOG_TAG, "Failed to initialize WiFi");
-        vTaskDelete(NULL);
-        return;
-    }
-
-    ESP_LOGI(LOG_TAG, "Web server started. Connect to RaceTimer-AP network.");
-    ESP_LOGI(LOG_TAG, "Password: racetimer123");
-    ESP_LOGI(LOG_TAG, "Then open http://192.168.4.1 in your browser");
-
+    
+    ESP_LOGI(LOG_TAG, "WiFi initialized successfully");
+    ESP_LOGI(LOG_TAG, "Mode: %s", apMode ? "AP" : "Station");
+    ESP_LOGI(LOG_TAG, "SSID: %s", ssid);
+    ESP_LOGI(LOG_TAG, "IP: %s", apMode ? WiFi.softAPIP().toString().c_str() : WiFi.localIP().toString().c_str());
+    
     while (1) {
         // Nothing to do here as AsyncWebServer handles requests asynchronously
         vTaskDelay(pdMS_TO_TICKS(1000));
@@ -349,6 +360,12 @@ void setup() {
     // Initialize storage
     if (!initStorage()) {
         ESP_LOGE(LOG_TAG, "Failed to initialize storage!");
+        return;
+    }
+    
+    // Initialize configuration
+    if (!ConfigManager::getInstance().begin()) {
+        ESP_LOGE(LOG_TAG, "Failed to initialize configuration!");
         return;
     }
     

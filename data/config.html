@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CO₂ Race Timer - Configuration</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
+        }
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .version-info {
+            font-size: 0.8rem;
+            color: #6c757d;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+            margin-bottom: 1.5rem;
+        }
+        .form-label {
+            font-weight: 500;
+        }
+        .help-text {
+            font-size: 0.875rem;
+            color: #6c757d;
+        }
+        .nav-pills .nav-link {
+            color: #495057;
+        }
+        .nav-pills .nav-link.active {
+            background-color: #0d6efd;
+            color: white;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+        <div class="container">
+            <span class="navbar-brand">CO₂ Race Timer</span>
+            <span class="version-info text-light">v0.11.3</span>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="index.html">
+                            <i class="fas fa-home"></i> Home
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="config.html">
+                            <i class="fas fa-cog"></i> Configuration
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container py-4">
+        <div class="row">
+            <div class="col-md-3 mb-4">
+                <div class="list-group">
+                    <a class="list-group-item list-group-item-action active" data-bs-toggle="list" href="#network">
+                        <i class="fas fa-wifi me-2"></i>Network
+                    </a>
+                    <a class="list-group-item list-group-item-action" data-bs-toggle="list" href="#sensors">
+                        <i class="fas fa-microchip me-2"></i>Sensors
+                    </a>
+                    <a class="list-group-item list-group-item-action" data-bs-toggle="list" href="#race">
+                        <i class="fas fa-flag-checkered me-2"></i>Race Settings
+                    </a>
+                    <a class="list-group-item list-group-item-action" data-bs-toggle="list" href="#system">
+                        <i class="fas fa-cogs me-2"></i>System
+                    </a>
+                </div>
+            </div>
+            
+            <div class="col-md-9">
+                <div class="tab-content">
+                    <!-- Network Settings -->
+                    <div class="tab-pane fade show active" id="network">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title mb-4">Network Configuration</h5>
+                                <form id="networkForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">WiFi Mode</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="wifiMode" id="modeStation" value="station" checked>
+                                            <label class="form-check-label" for="modeStation">Station Mode (Connect to existing network)</label>
+                                        </div>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="radio" name="wifiMode" id="modeAP" value="ap">
+                                            <label class="form-check-label" for="modeAP">Access Point Mode (Create network)</label>
+                                        </div>
+                                    </div>
+                                    
+                                    <div id="stationSettings">
+                                        <div class="mb-3">
+                                            <label for="ssid" class="form-label">WiFi Network Name (SSID)</label>
+                                            <input type="text" class="form-control" id="ssid" name="ssid">
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="password" class="form-label">WiFi Password</label>
+                                            <input type="password" class="form-control" id="password" name="password">
+                                        </div>
+                                    </div>
+
+                                    <div id="apSettings" style="display: none;">
+                                        <div class="mb-3">
+                                            <label for="apSsid" class="form-label">Access Point Name</label>
+                                            <input type="text" class="form-control" id="apSsid" name="apSsid" value="RaceTimer-AP">
+                                            <div class="help-text">Name of the WiFi network created by the device</div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label for="apPassword" class="form-label">Access Point Password</label>
+                                            <input type="password" class="form-control" id="apPassword" name="apPassword" value="racetimer123">
+                                            <div class="help-text">Password for connecting to the device's WiFi network</div>
+                                        </div>
+                                    </div>
+                                    
+                                    <button type="submit" class="btn btn-primary">Save Network Settings</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Sensor Settings -->
+                    <div class="tab-pane fade" id="sensors">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title mb-4">Sensor Configuration</h5>
+                                <form id="sensorForm">
+                                    <div class="mb-3">
+                                        <label for="detectionThreshold" class="form-label">Detection Threshold (mm)</label>
+                                        <input type="number" class="form-control" id="detectionThreshold" name="detectionThreshold" value="150">
+                                        <div class="help-text">Distance threshold for detecting cars at finish line</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="samplingRate" class="form-label">Sampling Rate (Hz)</label>
+                                        <input type="number" class="form-control" id="samplingRate" name="samplingRate" value="50">
+                                        <div class="help-text">How often sensors take measurements (50Hz recommended)</div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Save Sensor Settings</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Race Settings -->
+                    <div class="tab-pane fade" id="race">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title mb-4">Race Configuration</h5>
+                                <form id="raceForm">
+                                    <div class="mb-3">
+                                        <label for="relayDuration" class="form-label">Start Gate Release Time (ms)</label>
+                                        <input type="number" class="form-control" id="relayDuration" name="relayDuration" value="250">
+                                        <div class="help-text">Duration of relay activation for start gate</div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="tieThreshold" class="form-label">Tie Detection Threshold (ms)</label>
+                                        <input type="number" class="form-control" id="tieThreshold" name="tieThreshold" value="2">
+                                        <div class="help-text">Maximum time difference to consider a tie</div>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Save Race Settings</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- System Settings -->
+                    <div class="tab-pane fade" id="system">
+                        <div class="card">
+                            <div class="card-body">
+                                <h5 class="card-title mb-4">System Configuration</h5>
+                                <form id="systemForm">
+                                    <div class="mb-3">
+                                        <label class="form-label">Time Synchronization</label>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="enableNtp" name="enableNtp" checked>
+                                            <label class="form-check-label" for="enableNtp">Enable NTP time sync</label>
+                                        </div>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="timezone" class="form-label">Timezone</label>
+                                        <select class="form-select" id="timezone" name="timezone">
+                                            <option value="AEST-10">Australia/Sydney (AEST)</option>
+                                            <option value="UTC+0">UTC</option>
+                                        </select>
+                                    </div>
+                                    <div class="mb-3">
+                                        <label for="logLevel" class="form-label">Log Level</label>
+                                        <select class="form-select" id="logLevel" name="logLevel">
+                                            <option value="ERROR">Error</option>
+                                            <option value="WARN">Warning</option>
+                                            <option value="INFO" selected>Info</option>
+                                            <option value="DEBUG">Debug</option>
+                                        </select>
+                                    </div>
+                                    <button type="submit" class="btn btn-primary">Save System Settings</button>
+                                </form>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="js/bootstrap.bundle.min.js"></script>
+    <script>
+        let ws;
+        let reconnectAttempts = 0;
+        const maxReconnectAttempts = 5;
+
+        // Form elements
+        const networkForm = document.getElementById('networkForm');
+        const sensorForm = document.getElementById('sensorForm');
+        const raceForm = document.getElementById('raceForm');
+        const systemForm = document.getElementById('systemForm');
+        const modeStation = document.getElementById('modeStation');
+        const modeAP = document.getElementById('modeAP');
+        const stationSettings = document.getElementById('stationSettings');
+        const apSettings = document.getElementById('apSettings');
+
+        // Handle WiFi mode change
+        modeStation.addEventListener('change', () => {
+            stationSettings.style.display = 'block';
+            apSettings.style.display = 'none';
+        });
+
+        modeAP.addEventListener('change', () => {
+            stationSettings.style.display = 'none';
+            apSettings.style.display = 'block';
+        });
+
+        function connectWebSocket() {
+            ws = new WebSocket(`ws://${window.location.hostname}/ws`);
+            
+            ws.onopen = () => {
+                console.log('WebSocket connected');
+                reconnectAttempts = 0;
+                requestConfig();
+            };
+            
+            ws.onclose = () => {
+                console.log('WebSocket disconnected');
+                if (reconnectAttempts < maxReconnectAttempts) {
+                    reconnectAttempts++;
+                    setTimeout(connectWebSocket, 2000);
+                }
+            };
+            
+            ws.onmessage = (event) => {
+                const data = JSON.parse(event.data);
+                handleWebSocketMessage(data);
+            };
+        }
+
+        function handleWebSocketMessage(data) {
+            if (data.type === 'config') {
+                updateFormValues(data.data);
+            } else if (data.type === 'error') {
+                showError(data.message);
+            } else if (data.type === 'success') {
+                showSuccess(data.message);
+            }
+        }
+
+        function updateFormValues(config) {
+            // Network settings
+            document.getElementById('ssid').value = config.wifi.ssid || '';
+            document.getElementById('password').value = config.wifi.password || '';
+            document.getElementById('apSsid').value = config.ap.ssid || 'RaceTimer-AP';
+            document.getElementById('apPassword').value = config.ap.password || 'racetimer123';
+            
+            // Sensor settings
+            document.getElementById('detectionThreshold').value = config.sensor.threshold || 150;
+            document.getElementById('samplingRate').value = config.sensor.rate || 50;
+            
+            // Race settings
+            document.getElementById('relayDuration').value = config.race.relayDuration || 250;
+            document.getElementById('tieThreshold').value = config.race.tieThreshold || 2;
+            
+            // System settings
+            document.getElementById('enableNtp').checked = config.system.ntp || true;
+            document.getElementById('timezone').value = config.system.timezone || 'AEST-10';
+            document.getElementById('logLevel').value = config.system.logLevel || 'INFO';
+        }
+
+        function showError(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast align-items-center text-white bg-danger border-0';
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-exclamation-circle"></i> ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            
+            const container = document.createElement('div');
+            container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            container.appendChild(toast);
+            document.body.appendChild(container);
+            
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            
+            toast.addEventListener('hidden.bs.toast', () => container.remove());
+        }
+
+        function showSuccess(message) {
+            const toast = document.createElement('div');
+            toast.className = 'toast align-items-center text-white bg-success border-0';
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-check-circle"></i> ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            
+            const container = document.createElement('div');
+            container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            container.appendChild(toast);
+            document.body.appendChild(container);
+            
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            
+            toast.addEventListener('hidden.bs.toast', () => container.remove());
+        }
+
+        function requestConfig() {
+            ws.send(JSON.stringify({ type: 'request', data: 'config' }));
+        }
+
+        // Form submission handlers
+        networkForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(networkForm);
+            const config = {
+                type: 'config',
+                section: 'network',
+                data: Object.fromEntries(formData)
+            };
+            ws.send(JSON.stringify(config));
+        });
+
+        sensorForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(sensorForm);
+            const config = {
+                type: 'config',
+                section: 'sensor',
+                data: Object.fromEntries(formData)
+            };
+            ws.send(JSON.stringify(config));
+        });
+
+        raceForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(raceForm);
+            const config = {
+                type: 'config',
+                section: 'race',
+                data: Object.fromEntries(formData)
+            };
+            ws.send(JSON.stringify(config));
+        });
+
+        systemForm.addEventListener('submit', (e) => {
+            e.preventDefault();
+            const formData = new FormData(systemForm);
+            const config = {
+                type: 'config',
+                section: 'system',
+                data: Object.fromEntries(formData)
+            };
+            ws.send(JSON.stringify(config));
+        });
+
+        // Connect when page loads
+        connectWebSocket();
+    </script>
+</body>
+</html>

@@ -106,7 +106,7 @@
   - [ ] Responsive grid layout
   - [ ] Portrait/landscape modes
 - [ ] Implement race history
-  - [ ] LittleFS storage
+  - [ ] Sd card storage
   - [ ] Automatic saving
   - [ ] History display
   - [ ] Race cleanup
@@ -261,9 +261,14 @@
   - [ ] HTTP request handlers
   - [ ] WebSocket server
   - [ ] File system for web assets
-- [ ] Network connectivity manager
-  - [ ] WiFi configuration portal
-  - [ ] Connection recovery
+- [x] Network connectivity manager
+  - [x] WiFi configuration portal
+  - [x] Connection recovery
+  - [x] Debug WiFi connection issues (2025-04-11)
+    - [x] Fix configuration changes not being applied
+    - [x] Add detailed error logging
+    - [x] Handle mode switching properly
+    - [x] Fix circular dependencies (2025-04-12)
 - [ ] User interface module (LED states + button control)
 
 ## Documentation Tasks

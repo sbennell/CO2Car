@@ -4,89 +4,138 @@
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>CO2 Race Timer</title>
+    <link href="css/bootstrap.min.css" rel="stylesheet">
+    <link href="css/all.min.css" rel="stylesheet">
     <style>
         body {
-            font-family: Arial, sans-serif;
-            margin: 0;
-            padding: 20px;
-            background: #f0f0f0;
+            font-family: 'Segoe UI', system-ui, sans-serif;
+            background: #f8f9fa;
+            min-height: 100vh;
         }
-        .container {
-            max-width: 800px;
-            margin: 0 auto;
-            background: white;
-            padding: 20px;
-            border-radius: 10px;
-            box-shadow: 0 2px 5px rgba(0,0,0,0.1);
-        }
-        .timer {
-            font-size: 48px;
-            text-align: center;
-            margin: 20px 0;
-            font-family: monospace;
-        }
-        .lanes {
-            display: grid;
-            grid-template-columns: 1fr 1fr;
-            gap: 20px;
-            margin: 20px 0;
-        }
-        .lane {
-            text-align: center;
-            padding: 20px;
-            background: #f8f8f8;
-            border-radius: 5px;
+        .timer-display {
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 4rem;
+            font-weight: bold;
+            color: #212529;
         }
         .lane-time {
-            font-size: 36px;
-            font-family: monospace;
+            font-family: 'JetBrains Mono', monospace;
+            font-size: 2.5rem;
+            font-weight: bold;
         }
-        .status {
-            text-align: center;
-            font-size: 24px;
-            margin: 20px 0;
-            padding: 10px;
-            border-radius: 5px;
+        .status-badge {
+            font-size: 1.2rem;
+            padding: 0.5rem 1rem;
         }
-        .status.idle { background: #e0e0e0; }
-        .status.ready { background: #fff3cd; }
-        .status.running { background: #d4edda; }
-        .status.finished { background: #cce5ff; }
-        @media (max-width: 600px) {
-            .lanes {
-                grid-template-columns: 1fr;
-            }
+        .status-icon {
+            font-size: 2rem;
+            margin-bottom: 0.5rem;
+        }
+        .control-btn {
+            width: 120px;
+            margin: 0.5rem;
+        }
+        .system-status {
+            font-size: 0.9rem;
+        }
+        .system-status i {
+            margin-right: 0.5rem;
+        }
+        .card {
+            border: none;
+            box-shadow: 0 0.125rem 0.25rem rgba(0,0,0,0.075);
+        }
+        .navbar-brand {
+            font-size: 1.5rem;
+            font-weight: bold;
+        }
+        .version-info {
+            font-size: 0.8rem;
+            color: #6c757d;
         }
     </style>
 </head>
 <body>
-    <div class="container">
-        <h1 style="text-align: center;">CO2 Race Timer</h1>
-        
-        <div id="status" class="status idle">
-            IDLE
+    <nav class="navbar navbar-expand-lg navbar-dark bg-primary mb-4">
+        <div class="container">
+            <span class="navbar-brand">CO₂ Race Timer</span>
+            <span class="version-info text-light">v0.11.3</span>
         </div>
+    </nav>
 
-        <div id="timer" class="timer">
-            00:00.000
-        </div>
-
-        <div class="lanes">
-            <div class="lane">
-                <h2>Lane 1</h2>
-                <div id="lane1-time" class="lane-time">--:--:---</div>
+    <div class="container py-4">
+        <div class="row g-4">
+            <!-- Race Status Card -->
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <div id="status" class="status-badge badge bg-secondary mb-3">IDLE</div>
+                        <div id="timer" class="timer-display">00:00.000</div>
+                    </div>
+                </div>
             </div>
-            <div class="lane">
-                <h2>Lane 2</h2>
-                <div id="lane2-time" class="lane-time">--:--:---</div>
+
+            <!-- Lane Times Card -->
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row text-center">
+                            <div class="col-md-6 mb-4 mb-md-0">
+                                <h4>Lane 1</h4>
+                                <div id="lane1-time" class="lane-time">--:--.---</div>
+                            </div>
+                            <div class="col-md-6">
+                                <h4>Lane 2</h4>
+                                <div id="lane2-time" class="lane-time">--:--.---</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Controls Card -->
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body text-center">
+                        <h5 class="card-title">Race Controls</h5>
+                        <button id="btnLoad" class="btn btn-warning control-btn" disabled>
+                            <i class="fas fa-upload"></i> Load
+                        </button>
+                        <button id="btnStart" class="btn btn-success control-btn" disabled>
+                            <i class="fas fa-flag"></i> Start
+                        </button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- System Status Card -->
+            <div class="col-12">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">System Status</h5>
+                        <div class="row system-status">
+                            <div class="col-md-6">
+                                <p><i class="fas fa-wifi text-success"></i> WiFi: Connected</p>
+                                <p><i class="fas fa-microchip text-success"></i> Sensors: Ready</p>
+                            </div>
+                            <div class="col-md-6">
+                                <p><i class="fas fa-bolt text-success"></i> Relay: Ready</p>
+                                <p><i class="fas fa-sd-card text-success"></i> Storage: Available</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
             </div>
         </div>
     </div>
 
+    <script src="js/bootstrap.bundle.min.js"></script>
     <script>
         let ws;
         let reconnectAttempts = 0;
         const maxReconnectAttempts = 5;
+        const btnLoad = document.getElementById('btnLoad');
+        const btnStart = document.getElementById('btnStart');
 
         function connectWebSocket() {
             ws = new WebSocket(`ws://${window.location.hostname}/ws`);
@@ -111,16 +160,48 @@
         }
 
         function handleWebSocketMessage(data) {
-            if (data.type === 'state') {
-                updateStatus(data.data);
-            } else if (data.type === 'time') {
-                updateTimes(data);
+            switch(data.type) {
+                case 'state':
+                    updateStatus(data.data);
+                    break;
+                case 'time':
+                    updateTimes(data);
+                    break;
+                case 'system_status':
+                    updateSystemStatus(data.data);
+                    break;
+                case 'error':
+                    showError(data.message);
+                    break;
             }
         }
 
         function updateStatus(state) {
             const statusDiv = document.getElementById('status');
-            statusDiv.className = 'status ' + state.toLowerCase();
+            let bgClass = 'bg-secondary';
+            
+            switch(state.toLowerCase()) {
+                case 'ready':
+                    bgClass = 'bg-warning';
+                    btnStart.disabled = false;
+                    btnLoad.disabled = true;
+                    break;
+                case 'running':
+                    bgClass = 'bg-success';
+                    btnStart.disabled = true;
+                    btnLoad.disabled = true;
+                    break;
+                case 'finished':
+                    bgClass = 'bg-info';
+                    btnStart.disabled = true;
+                    btnLoad.disabled = false;
+                    break;
+                default: // IDLE
+                    btnStart.disabled = true;
+                    btnLoad.disabled = false;
+            }
+            
+            statusDiv.className = 'status-badge badge ' + bgClass;
             statusDiv.textContent = state;
         }
 
@@ -138,8 +219,76 @@
             document.getElementById('lane2-time').textContent = formatTime(data.lane2);
         }
 
+        function updateSystemStatus(status) {
+            // Update WiFi status
+            const wifiIcon = document.querySelector('.fa-wifi');
+            wifiIcon.className = `fas fa-wifi text-${status.wifi ? 'success' : 'danger'}`;
+            wifiIcon.nextSibling.textContent = ` WiFi: ${status.wifi ? 'Connected' : 'Disconnected'}`;
+
+            // Update Sensors status
+            const sensorIcon = document.querySelector('.fa-microchip');
+            sensorIcon.className = `fas fa-microchip text-${status.sensors ? 'success' : 'danger'}`;
+            sensorIcon.nextSibling.textContent = ` Sensors: ${status.sensors ? 'Ready' : 'Error'}`;
+
+            // Update Relay status
+            const relayIcon = document.querySelector('.fa-bolt');
+            relayIcon.className = `fas fa-bolt text-${status.relay ? 'success' : 'danger'}`;
+            relayIcon.nextSibling.textContent = ` Relay: ${status.relay ? 'Ready' : 'Error'}`;
+
+            // Update Storage status
+            const storageIcon = document.querySelector('.fa-sd-card');
+            storageIcon.className = `fas fa-sd-card text-${status.storage ? 'success' : 'danger'}`;
+            storageIcon.nextSibling.textContent = ` Storage: ${status.storage ? 'Available' : 'Error'}`;
+        }
+
+        function showError(message) {
+            // Create toast notification
+            const toast = document.createElement('div');
+            toast.className = 'toast align-items-center text-white bg-danger border-0';
+            toast.setAttribute('role', 'alert');
+            toast.setAttribute('aria-live', 'assertive');
+            toast.setAttribute('aria-atomic', 'true');
+            toast.innerHTML = `
+                <div class="d-flex">
+                    <div class="toast-body">
+                        <i class="fas fa-exclamation-circle"></i> ${message}
+                    </div>
+                    <button type="button" class="btn-close btn-close-white me-2 m-auto" data-bs-dismiss="toast"></button>
+                </div>
+            `;
+            
+            // Add to container
+            const container = document.createElement('div');
+            container.className = 'toast-container position-fixed bottom-0 end-0 p-3';
+            container.appendChild(toast);
+            document.body.appendChild(container);
+            
+            // Show toast
+            const bsToast = new bootstrap.Toast(toast);
+            bsToast.show();
+            
+            // Remove after hidden
+            toast.addEventListener('hidden.bs.toast', () => container.remove());
+        }
+
+        // Add event listeners for buttons
+        btnLoad.addEventListener('click', () => {
+            ws.send(JSON.stringify({ type: 'command', action: 'load' }));
+        });
+
+        btnStart.addEventListener('click', () => {
+            ws.send(JSON.stringify({ type: 'command', action: 'start' }));
+        });
+
         // Connect when page loads
         connectWebSocket();
+
+        // Request initial system status
+        setTimeout(() => {
+            if (ws.readyState === WebSocket.OPEN) {
+                ws.send(JSON.stringify({ type: 'request', data: 'system_status' }));
+            }
+        }, 1000);
     </script>
 </body>
 </html>
