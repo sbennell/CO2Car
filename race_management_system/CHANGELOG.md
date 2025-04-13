@@ -5,6 +5,76 @@ All notable changes to the CO2 Car Race Management System will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.6.0] - 2025-04-14
+
+### Added
+- Comprehensive check-in management system:
+  - Check-in deadline management with countdown timers
+  - Automated notifications for racers who haven't checked in
+  - Real-time check-in status updates via WebSockets
+  - Bulk check-in functionality for race officials
+  - Check-in status tracking and visualization
+  - Configurable check-in deadlines per event
+- Scheduled background tasks:
+  - Automatic check-in notification system
+  - Scheduled task runner for background processes
+- Configuration management system:
+  - JSON-based configuration storage
+  - Timezone support for deadlines
+
+### Changed
+- Enhanced Event model with check-in deadline management methods
+- Improved racer management interface with check-in status indicators
+- Reorganized application structure with dedicated check-in routes
+
+## [0.5.0] - 2025-04-14
+
+### Added
+- Comprehensive "On Deck" display system:
+  - Dedicated On Deck page showing current and upcoming heats
+  - Color-coded lane assignment cards for better visualization
+  - Real-time countdown timers for current and next heats
+  - Race preparation checklist for officials
+  - Visual status indicators for each lane
+  - Dashboard integration with On Deck information
+- Enhanced heat detail view:
+  - Improved lane assignment cards with racer information
+  - Visual indicators for race positions and results
+  - Interactive countdown timer with reset functionality
+  - Confirmation dialogs for race control actions
+- New navigation elements:
+  - On Deck link in main navigation
+  - Quick access to full On Deck view from dashboard
+
+### Changed
+- Redesigned heat detail page with more prominent lane assignments
+- Enhanced dashboard with On Deck preview section
+- Improved user experience for race preparation and monitoring
+
+## [0.4.0] - 2025-04-14
+
+### Added
+- Comprehensive real-time standings system:
+  - New Standing model for tracking racer performance metrics
+  - Points calculation based on race results
+  - Automatic ranking with tie handling
+  - Best time, average time, and race count tracking
+  - Win tracking and statistics
+- Enhanced event features:
+  - Configurable points system per event
+  - Standings visualization with charts
+  - Real-time standings updates after each heat
+- New user interface components:
+  - Event standings page with detailed statistics
+  - Heat results recording interface
+  - Points visualization with Chart.js
+  - Navigation links to standings throughout the application
+
+### Changed
+- Enhanced Racer model with methods for calculating points and statistics
+- Improved heat detail page with results recording functionality
+- Updated database schema with new standings table
+
 ## [0.3.0] - 2025-04-14
 
 ### Added

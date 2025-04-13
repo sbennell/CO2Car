@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.events') }}">Events</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('main.event_detail', event_id=event.id) }}">{{ event.name }}</a></li>
+            <li class="breadcrumb-item active">Standings</li>
+        </ol>
+    </nav>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Standings for {{ event.name }}</h1>
+            <p class="lead">
+                Current racer standings and statistics
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <form method="POST" action="{{ url_for('main.update_standings', event_id=event.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-primary">Update Standings</button>
+                </form>
+                <a href="{{ url_for('export.export_event_standings', event_id=event.id) }}" class="btn btn-success"><i class="fas fa-file-excel"></i> Export Standings</a>
+                <a href="{{ url_for('export.export_event_menu', event_id=event.id) }}" class="btn btn-secondary"><i class="fas fa-file-export"></i> All Exports</a>
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Leaderboard</h5>
+        </div>
+        <div class="card-body">
+            {% if standings %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Rank</th>
+                                <th>Racer</th>
+                                <th>Car #</th>
+                                <th>Points</th>
+                                <th>Best Time</th>
+                                <th>Avg Time</th>
+                                <th>Races</th>
+                                <th>Wins</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for standing in standings %}
+                            <tr class="{% if standing.rank <= 3 %}table-success{% endif %}">
+                                <td>
+                                    {% if standing.rank == 1 %}
+                                        <span class="badge bg-warning text-dark">🏆 {{ standing.rank }}</span>
+                                    {% elif standing.rank == 2 %}
+                                        <span class="badge bg-secondary">🥈 {{ standing.rank }}</span>
+                                    {% elif standing.rank == 3 %}
+                                        <span class="badge bg-danger">🥉 {{ standing.rank }}</span>
+                                    {% else %}
+                                        {{ standing.rank }}
+                                    {% endif %}
+                                </td>
+                                <td>{{ standing.racer.name }}</td>
+                                <td>{{ standing.racer.car_number }}</td>
+                                <td><strong>{{ standing.total_points }}</strong></td>
+                                <td>{{ standing.best_time|round(3) if standing.best_time else '-' }}s</td>
+                                <td>{{ standing.average_time|round(3) if standing.average_time else '-' }}s</td>
+                                <td>{{ standing.race_count }}</td>
+                                <td>{{ standing.wins }}</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted">No standings available for this event yet. Racers need to complete at least one heat.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    {% if standings %}
+    <div class="row mt-4">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Points Visualization</h5>
+                </div>
+                <div class="card-body">
+                    <canvas id="pointsChart" height="300" 
+                        data-racer-names="{{ standings|selectattr('rank', '<=', 10)|map(attribute='racer.name')|list|tojson }}"
+                        data-points="{{ standings|selectattr('rank', '<=', 10)|map(attribute='total_points')|list|tojson }}"
+                    ></canvas>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %}
+
+{% block scripts %}
+{% if standings %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const chartCanvas = document.getElementById('pointsChart');
+        const racerNames = JSON.parse(chartCanvas.dataset.racerNames);
+        const points = JSON.parse(chartCanvas.dataset.points);
+        
+        // Create points chart
+        const pointsCtx = chartCanvas.getContext('2d');
+        new Chart(pointsCtx, {
+            type: 'bar',
+            data: {
+                labels: racerNames,
+                datasets: [{
+                    label: 'Total Points',
+                    data: points,
+                    backgroundColor: 'rgba(54, 162, 235, 0.5)',
+                    borderColor: 'rgba(54, 162, 235, 1)',
+                    borderWidth: 1
+                }]
+            },
+            options: {
+                responsive: true,
+                scales: {
+                    y: {
+                        beginAtZero: true,
+                        title: {
+                            display: true,
+                            text: 'Points'
+                        }
+                    },
+                    x: {
+                        title: {
+                            display: true,
+                            text: 'Racers'
+                        }
+                    }
+                },
+                plugins: {
+                    title: {
+                        display: true,
+                        text: 'Top 10 Racers by Points'
+                    }
+                }
+            }
+        });
+    });
+</script>
+{% endif %}
+{% endblock %}

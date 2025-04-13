@@ -183,26 +183,30 @@
   - [x] Generate round-robin matchups
 
 ### Real-time Standings
-- [ ] Implement standings calculation system
-  - [ ] Track points per racer
-  - [ ] Calculate rankings
-  - [ ] Update standings in real-time
-  - [ ] Display race progression
+- [x] Implement standings calculation system
+  - [x] Track points per racer
+  - [x] Calculate rankings
+  - [x] Update standings in real-time
+  - [x] Display race progression
 
 ### Race Operations Interface
-- [ ] Create "On Deck" display system
-  - [ ] Show upcoming races
-  - [ ] Display next racers
-  - [ ] Highlight lane assignments
-  - [ ] Add preparation countdown
+- [x] Create "On Deck" display system
+  - [x] Show upcoming races
+  - [x] Display next racers
+  - [x] Highlight lane assignments
+  - [x] Add preparation countdown
+  - [x] Implement color-coded lane cards
+  - [x] Add race preparation checklist
+  - [x] Create real-time timers for current and next heats
+  - [x] Add visual status indicators for lanes
 
 ### Check-in System
 - [x] Implement racer check-in functionality
   - [x] Digital check-in interface
   - [x] Real-time check-in status updates
   - [x] "Please Check-In" display
-  - [ ] Automated notifications
-  - [ ] Check-in deadline management
+  - [x] Automated notifications
+  - [x] Check-in deadline management
 
 ### Race Data Management
 - [x] Create participant database

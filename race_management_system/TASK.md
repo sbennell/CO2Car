@@ -43,19 +43,25 @@
 - [x] Racer listing page
 - [x] Add/Edit/Delete racers
 - [x] Racer check-in system
-- [ ] Racer statistics
-- [ ] Racer history
-- [ ] Racer rankings
+  - [x] Basic check-in functionality
+  - [x] Check-in status tracking
+  - [x] Check-in deadline management
+  - [x] Automated notifications for non-checked-in racers
+  - [x] Real-time check-in status updates
+  - [x] Bulk check-in functionality
+- [x] Racer statistics
+- [x] Racer history
+- [x] Racer rankings
 - [ ] Car specifications tracking
-- [ ] Performance analytics
+- [x] Performance analytics
 
 ## Real-time Features
 - [x] WebSocket setup for live updates
 - [ ] Live race timing
-- [ ] Real-time leaderboard
+- [x] Real-time leaderboard
 - [ ] Live race commentary
-- [ ] Race status notifications
-- [ ] Instant result updates
+- [x] Race status notifications
+- [x] Instant result updates
 
 ## Data Management
 - [x] Basic SQLite database setup
@@ -68,6 +74,14 @@
 ## UI/UX Improvements
 - [x] Responsive design with Bootstrap
 - [x] Flash message system
+- [x] On Deck display system
+  - [x] Current and next heat visualization
+  - [x] Color-coded lane cards
+  - [x] Real-time countdown timers
+  - [x] Race preparation checklist
+  - [x] Lane status indicators
+- [x] Race preparation countdown
+- [x] Enhanced lane assignments display
 - [ ] Dark/Light theme toggle
 - [ ] Custom branding options
 - [ ] Mobile-friendly controls

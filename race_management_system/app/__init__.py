@@ -4,6 +4,7 @@ from flask_sqlalchemy import SQLAlchemy
 from flask_login import LoginManager
 from flask_migrate import Migrate
 import os
+import threading
 from dotenv import load_dotenv
 
 # Load environment variables
@@ -34,10 +35,16 @@ def create_app():
     from app.routes.main import main_bp
     from app.routes.api import api_bp
     from app.routes.auth import auth_bp
+    from app.routes.on_deck import on_deck_bp
+    from app.routes.export import export_bp
+    from app.routes.check_in import check_in_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(auth_bp, url_prefix='/auth')
+    app.register_blueprint(on_deck_bp)
+    app.register_blueprint(export_bp, url_prefix='/export')
+    app.register_blueprint(check_in_bp)
     
     # Import models and register user loader
     from app.models.user import User
@@ -49,5 +56,15 @@ def create_app():
     # Create database tables
     with app.app_context():
         db.create_all()
+    
+    # Start the scheduler in a background thread if not in debug mode
+    if not app.debug:
+        def start_scheduler():
+            from app.tasks.scheduler import run_scheduler
+            run_scheduler()
+        
+        scheduler_thread = threading.Thread(target=start_scheduler)
+        scheduler_thread.daemon = True
+        scheduler_thread.start()
     
     return app 

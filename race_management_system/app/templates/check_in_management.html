@@ -1,0 +1,369 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.events') }}">Events</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('main.event_detail', event_id=event.id) }}">{{ event.name }}</a></li>
+            <li class="breadcrumb-item active">Check-in Management</li>
+        </ol>
+    </nav>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Check-in Management</h1>
+            <p class="lead">
+                Manage racer check-ins for {{ event.name }}
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            <div class="btn-group">
+                <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#setDeadlineModal">Set Deadline</button>
+                <form method="POST" action="{{ url_for('check_in.send_check_in_notifications', event_id=event.id) }}" class="d-inline">
+                    <button type="submit" class="btn btn-warning" {% if event.is_check_in_notification_sent() %}disabled{% endif %}>
+                        {% if event.is_check_in_notification_sent() %}Notifications Sent{% else %}Send Notifications{% endif %}
+                    </button>
+                </form>
+                <form method="POST" action="{{ url_for('check_in.reset_check_in', event_id=event.id) }}" class="d-inline" onsubmit="return confirm('Are you sure you want to reset all check-in statuses?');">
+                    <button type="submit" class="btn btn-danger">Reset All</button>
+                </form>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-4 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Check-in Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>Total Racers:</div>
+                        <div><strong>{{ check_in_status.total }}</strong></div>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>Checked In:</div>
+                        <div><strong>{{ check_in_status.checked_in }}</strong></div>
+                    </div>
+                    <div class="d-flex justify-content-between mb-3">
+                        <div>Not Checked In:</div>
+                        <div><strong>{{ check_in_status.not_checked_in }}</strong></div>
+                    </div>
+                    <div class="progress mb-3">
+                        <div class="progress-bar bg-success" role="progressbar" 
+                             style="width: {{ check_in_status.percentage }}%" 
+                             aria-valuenow="{{ check_in_status.percentage }}" 
+                             aria-valuemin="0" 
+                             aria-valuemax="100">{{ check_in_status.percentage }}%</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-8 mb-4">
+            <div class="card">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Check-in Deadline</h5>
+                </div>
+                <div class="card-body">
+                    {% set deadline = event.get_check_in_deadline() %}
+                    {% if deadline %}
+                    <div class="deadline-info mb-3">
+                        <p class="mb-2">Current Deadline: <strong>{{ deadline.strftime('%Y-%m-%d %H:%M') }}</strong></p>
+                        
+                        {% if event.is_check_in_deadline_passed() %}
+                        <div class="alert alert-danger">
+                            <i class="fas fa-exclamation-triangle me-2"></i> Deadline has passed
+                        </div>
+                        {% else %}
+                        <div class="alert alert-info">
+                            <div class="d-flex justify-content-between align-items-center">
+                                <div>
+                                    <i class="fas fa-clock me-2"></i> Time remaining:
+                                </div>
+                                <div id="deadline-countdown" class="fw-bold">
+                                    Loading...
+                                </div>
+                            </div>
+                        </div>
+                        {% endif %}
+                    </div>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-circle me-2"></i> No check-in deadline has been set
+                    </div>
+                    {% endif %}
+                    
+                    <button class="btn btn-outline-primary" data-bs-toggle="modal" data-bs-target="#setDeadlineModal">
+                        {% if event.get_check_in_deadline() %}Update Deadline{% else %}Set Deadline{% endif %}
+                    </button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card">
+                <div class="card-header bg-primary text-white d-flex justify-content-between align-items-center">
+                    <h5 class="card-title mb-0">Racer Check-in Status</h5>
+                    <form method="POST" action="{{ url_for('check_in.check_in_bulk') }}" id="bulkCheckInForm">
+                        <button type="submit" class="btn btn-sm btn-light" id="bulkCheckInBtn" disabled>Check In Selected</button>
+                    </form>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover" id="racersTable">
+                            <thead>
+                                <tr>
+                                    <th>
+                                        <div class="form-check">
+                                            <input class="form-check-input" type="checkbox" id="selectAllRacers">
+                                        </div>
+                                    </th>
+                                    <th>Name</th>
+                                    <th>Car #</th>
+                                    <th>Group</th>
+                                    <th>Status</th>
+                                    <th>Check-in Time</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for racer in racers %}
+                                <tr class="{% if racer.checked_in %}table-success{% elif event.is_check_in_deadline_passed() %}table-danger{% endif %}">
+                                    <td>
+                                        <div class="form-check">
+                                            <input class="form-check-input racer-checkbox" type="checkbox" name="racer_ids" value="{{ racer.id }}" form="bulkCheckInForm" {% if racer.checked_in %}disabled{% endif %}>
+                                        </div>
+                                    </td>
+                                    <td>{{ racer.name }}</td>
+                                    <td>{{ racer.car_number }}</td>
+                                    <td>{{ racer.group or 'N/A' }}</td>
+                                    <td>
+                                        {% if racer.checked_in %}
+                                        <span class="badge bg-success">Checked In</span>
+                                        {% else %}
+                                        <span class="badge bg-danger">Not Checked In</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if racer.check_in_time %}
+                                        {{ racer.check_in_time.strftime('%Y-%m-%d %H:%M:%S') }}
+                                        {% else %}
+                                        -
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if not racer.checked_in %}
+                                        <form method="POST" action="{{ url_for('check_in.check_in_racer', racer_id=racer.id) }}" class="d-inline">
+                                            <button type="submit" class="btn btn-sm btn-success">Check In</button>
+                                        </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Set Deadline Modal -->
+<div class="modal fade" id="setDeadlineModal" tabindex="-1" aria-labelledby="setDeadlineModalLabel" aria-hidden="true">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title" id="setDeadlineModalLabel">Set Check-in Deadline</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <form method="POST" action="{{ url_for('check_in.set_check_in_deadline', event_id=event.id) }}">
+                <div class="modal-body">
+                    <div class="mb-3">
+                        <label for="deadline_date" class="form-label">Deadline Date</label>
+                        <input type="date" class="form-control" id="deadline_date" name="deadline_date" required 
+                               value="{{ event.check_in_deadline.strftime('%Y-%m-%d') if event.check_in_deadline else '' }}">
+                    </div>
+                    <div class="mb-3">
+                        <label for="deadline_time" class="form-label">Deadline Time</label>
+                        <input type="time" class="form-control" id="deadline_time" name="deadline_time" required
+                               value="{{ event.check_in_deadline.strftime('%H:%M') if event.check_in_deadline else '' }}">
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <button type="submit" class="btn btn-primary">Save Deadline</button>
+                </div>
+            </form>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Handle select all checkbox
+        const selectAllCheckbox = document.getElementById('selectAllRacers');
+        const racerCheckboxes = document.querySelectorAll('.racer-checkbox:not([disabled])');
+        const bulkCheckInBtn = document.getElementById('bulkCheckInBtn');
+        
+        selectAllCheckbox.addEventListener('change', function() {
+            racerCheckboxes.forEach(checkbox => {
+                checkbox.checked = selectAllCheckbox.checked;
+            });
+            updateBulkCheckInButton();
+        });
+        
+        // Handle individual checkboxes
+        racerCheckboxes.forEach(checkbox => {
+            checkbox.addEventListener('change', function() {
+                updateBulkCheckInButton();
+                
+                // Update "select all" checkbox
+                const allChecked = Array.from(racerCheckboxes).every(cb => cb.checked);
+                selectAllCheckbox.checked = allChecked;
+            });
+        });
+        
+        function updateBulkCheckInButton() {
+            const anyChecked = Array.from(racerCheckboxes).some(cb => cb.checked);
+            bulkCheckInBtn.disabled = !anyChecked;
+        }
+        
+        // Countdown timer for deadline
+        const countdownElement = document.getElementById('deadline-countdown');
+        {% if event.get_check_in_deadline() and not event.is_check_in_deadline_passed() %}
+        // JavaScript code for countdown
+        
+        function updateCountdown() {
+            fetch('{{ url_for("check_in.check_in_status", event_id=event.id) }}')
+                .then(function(response) { return response.json(); })
+                .then(function(data) {
+                    if (data.time_remaining !== null) {
+                        const days = Math.floor(data.time_remaining / (24 * 60 * 60));
+                        const hours = Math.floor((data.time_remaining % (24 * 60 * 60)) / (60 * 60));
+                        const minutes = Math.floor((data.time_remaining % (60 * 60)) / 60);
+                        const seconds = Math.floor(data.time_remaining % 60);
+                        
+                        let countdownText = '';
+                        if (days > 0) {
+                            countdownText += `${days}d `;
+                        }
+                        countdownText += `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}:${seconds.toString().padStart(2, '0')}`;
+                        
+                        countdownElement.textContent = countdownText;
+                        
+                        // Add color based on time remaining
+                        countdownElement.className = 'fw-bold';
+                        if (data.time_remaining < 3600) { // Less than 1 hour
+                            countdownElement.classList.add('text-danger');
+                        } else if (data.time_remaining < 86400) { // Less than 1 day
+                            countdownElement.classList.add('text-warning');
+                        } else {
+                            countdownElement.classList.add('text-info');
+                        }
+                        
+                        // If deadline passed, reload the page
+                        if (data.deadline_passed) {
+                            window.location.reload();
+                        }
+                    } else {
+                        countdownElement.textContent = 'No deadline set';
+                    }
+                })
+                .catch(function(error) {
+                    console.error('Error fetching countdown:', error);
+                    countdownElement.textContent = 'Error updating countdown';
+                });
+        }
+        
+        // Update immediately and then every second
+        updateCountdown();
+        setInterval(updateCountdown, 1000);
+        {% endif %}
+        
+        // WebSocket for real-time updates
+        const socket = io.connect();
+        
+        socket.on('racer_checked_in', function(data) {
+            // Find the racer row and update it
+            const racerRow = document.querySelector(`input[name="racer_ids"][value="${data.racer_id}"]`).closest('tr');
+            if (racerRow) {
+                // Update the row styling
+                racerRow.classList.add('table-success');
+                racerRow.classList.remove('table-danger');
+                
+                // Update the status badge
+                const statusCell = racerRow.querySelector('td:nth-child(5)');
+                statusCell.innerHTML = '<span class="badge bg-success">Checked In</span>';
+                
+                // Update the check-in time
+                const timeCell = racerRow.querySelector('td:nth-child(6)');
+                const checkInTime = new Date(data.check_in_time);
+                timeCell.textContent = checkInTime.toLocaleString();
+                
+                // Disable the checkbox and remove the check-in button
+                const checkbox = racerRow.querySelector('.racer-checkbox');
+                checkbox.disabled = true;
+                checkbox.checked = false;
+                
+                const actionCell = racerRow.querySelector('td:nth-child(7)');
+                actionCell.innerHTML = '';
+                
+                // Update the check-in status counters
+                fetch('{{ url_for("check_in.check_in_status", event_id=event.id) }}')
+                    .then(response => response.json())
+                    .then(data => {
+                        document.querySelector('.d-flex:nth-child(2) strong').textContent = data.checked_in;
+                        document.querySelector('.d-flex:nth-child(3) strong').textContent = data.not_checked_in;
+                        
+                        // Update progress bar
+                        const progressBar = document.querySelector('.progress-bar');
+                        progressBar.style.width = data.percentage + '%';
+                        progressBar.setAttribute('aria-valuenow', data.percentage);
+                        progressBar.textContent = data.percentage + '%';
+                    });
+            }
+        });
+        
+        socket.on('notification', function(data) {
+            if (data.type === 'check_in_reminder') {
+                // Show a toast notification
+                const toastContainer = document.createElement('div');
+                toastContainer.className = 'position-fixed bottom-0 end-0 p-3';
+                toastContainer.style.zIndex = '11';
+                
+                const toastHtml = `
+                <div class="toast" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header bg-warning text-dark">
+                        <strong class="me-auto">Check-in Reminder</strong>
+                        <small>Just now</small>
+                        <button type="button" class="btn-close" data-bs-dismiss="toast" aria-label="Close"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${data.message}
+                    </div>
+                </div>`;
+                
+                toastContainer.innerHTML = toastHtml;
+                document.body.appendChild(toastContainer);
+                
+                const toastElement = toastContainer.querySelector('.toast');
+                const toast = new bootstrap.Toast(toastElement);
+                toast.show();
+                
+                // Remove the toast container after the toast is hidden
+                toastElement.addEventListener('hidden.bs.toast', function() {
+                    document.body.removeChild(toastContainer);
+                });
+            }
+        });
+    });
+</script>
+{% endblock %}

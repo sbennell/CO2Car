@@ -1,10 +1,11 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
-from app.models.race import Event, Race, Racer, RaceResult, Round, Heat, Lane
+from app.models.race import Event, Race, Racer, RaceResult, Round, Heat, Lane, Standing
 from app import db
 from datetime import datetime
 import random
 import math
+from sqlalchemy import func
 
 main_bp = Blueprint('main', __name__)
 
@@ -19,7 +20,23 @@ def dashboard():
     """Main dashboard view"""
     events = Event.query.order_by(Event.date.desc()).limit(5).all()
     upcoming_races = Race.query.filter_by(status='scheduled').order_by(Race.start_time).limit(10).all()
-    return render_template('dashboard.html', events=events, upcoming_races=upcoming_races)
+    
+    # Get the current in-progress heat
+    current_heat = Heat.query.filter_by(status='in_progress').first()
+    
+    # Get upcoming heats (scheduled heats)
+    next_heat = Heat.query.filter_by(status='scheduled').order_by(Heat.id).first()
+    next_heat_lanes = []
+    
+    if next_heat:
+        next_heat_lanes = Lane.query.filter_by(heat_id=next_heat.id).order_by(Lane.lane_number).all()
+    
+    return render_template('dashboard.html', 
+                          events=events, 
+                          upcoming_races=upcoming_races,
+                          current_heat=current_heat,
+                          next_heat=next_heat,
+                          next_heat_lanes=next_heat_lanes)
 
 @main_bp.route('/events')
 @login_required
@@ -267,6 +284,32 @@ def heat_detail(heat_id):
     
     return render_template('heat_detail.html', heat=heat, lanes=lanes)
 
+@main_bp.route('/api/heats/<int:heat_id>/start', methods=['POST'])
+@login_required
+def start_heat(heat_id):
+    """Start a heat"""
+    heat = Heat.query.get_or_404(heat_id)
+    
+    if heat.status == 'scheduled':
+        heat.status = 'in_progress'
+        db.session.commit()
+        return jsonify({'status': 'success', 'message': 'Heat started successfully'})
+    
+    return jsonify({'status': 'error', 'message': 'Heat cannot be started'}), 400
+
+@main_bp.route('/api/heats/<int:heat_id>/complete', methods=['POST'])
+@login_required
+def complete_heat(heat_id):
+    """Complete a heat"""
+    heat = Heat.query.get_or_404(heat_id)
+    
+    if heat.status == 'in_progress':
+        heat.status = 'completed'
+        db.session.commit()
+        return jsonify({'status': 'success', 'message': 'Heat completed successfully'})
+    
+    return jsonify({'status': 'error', 'message': 'Heat cannot be completed'}), 400
+
 @main_bp.route('/racers/check-in/<int:racer_id>', methods=['POST'])
 @login_required
 def check_in_racer(racer_id):
@@ -278,6 +321,164 @@ def check_in_racer(racer_id):
     
     flash(f'Racer {racer.name} checked in successfully')
     return redirect(request.referrer or url_for('main.racers'))
+
+@main_bp.route('/events/<int:event_id>/standings')
+@login_required
+def event_standings(event_id):
+    """View standings for an event"""
+    event = Event.query.get_or_404(event_id)
+    
+    # Update standings before displaying
+    update_event_standings(event_id)
+    
+    # Get all standings for this event, ordered by rank
+    standings = Standing.query.filter_by(event_id=event_id).order_by(Standing.rank).all()
+    
+    return render_template('event_standings.html', event=event, standings=standings)
+
+@main_bp.route('/events/<int:event_id>/standings/update', methods=['POST'])
+@login_required
+def update_standings(event_id):
+    """Update standings for an event"""
+    event = Event.query.get_or_404(event_id)
+    
+    # Update standings
+    update_event_standings(event_id)
+    
+    flash('Standings updated successfully')
+    return redirect(url_for('main.event_standings', event_id=event_id))
+
+@main_bp.route('/heats/<int:heat_id>/record-results', methods=['POST'])
+@login_required
+def record_heat_results(heat_id):
+    """Record results for a heat"""
+    heat = Heat.query.get_or_404(heat_id)
+    
+    # Get all lanes for this heat
+    lanes = Lane.query.filter_by(heat_id=heat_id).all()
+    
+    # Process each lane result
+    for lane in lanes:
+        time_str = request.form.get(f'time_{lane.id}')
+        if time_str and time_str.strip():
+            try:
+                time = float(time_str)
+                
+                # Check if a result already exists
+                if lane.result:
+                    # Update existing result
+                    lane.result.time = time
+                else:
+                    # Create new result
+                    result = RaceResult(
+                        lane_id=lane.id,
+                        racer_id=lane.racer_id,
+                        lane_number=lane.lane_number,
+                        time=time
+                    )
+                    db.session.add(result)
+            except ValueError:
+                flash(f'Invalid time format for lane {lane.lane_number}', 'error')
+    
+    # Update heat status
+    heat.status = 'completed'
+    db.session.commit()
+    
+    # Calculate positions and points
+    calculate_heat_positions(heat_id)
+    
+    # Update event standings
+    update_event_standings(heat.round.event_id)
+    
+    flash('Heat results recorded successfully')
+    return redirect(url_for('main.heat_detail', heat_id=heat_id))
+
+def calculate_heat_positions(heat_id):
+    """Calculate positions and points for a heat based on race times"""
+    heat = Heat.query.get_or_404(heat_id)
+    
+    # Get all lanes with results for this heat, ordered by time
+    lanes_with_results = Lane.query.filter_by(heat_id=heat_id).join(RaceResult, Lane.id == RaceResult.lane_id)\
+        .filter(RaceResult.time != None).order_by(RaceResult.time).all()
+    
+    # Points allocation based on position (1st = 10, 2nd = 8, 3rd = 6, 4th = 5, 5th = 4, 6th = 3, 7th = 2, 8th = 1)
+    points_map = {1: 10, 2: 8, 3: 6, 4: 5, 5: 4, 6: 3, 7: 2, 8: 1}
+    
+    # Assign positions and points
+    for position, lane in enumerate(lanes_with_results, 1):
+        lane.result.position = position
+        lane.result.points = points_map.get(position, 0)  # Default to 0 points if position > 8
+    
+    db.session.commit()
+
+def update_event_standings(event_id):
+    """Update standings for all racers in an event"""
+    event = Event.query.get_or_404(event_id)
+    
+    # Get all racers who have participated in this event
+    racers_with_results = db.session.query(Racer).join(RaceResult, Racer.id == RaceResult.racer_id)\
+        .join(Lane, Lane.id == RaceResult.lane_id)\
+        .join(Heat, Heat.id == Lane.heat_id)\
+        .join(Round, Round.id == Heat.round_id)\
+        .filter(Round.event_id == event_id).distinct().all()
+    
+    # If no racers have results yet, get all racers assigned to lanes in this event
+    if not racers_with_results:
+        racers_with_results = db.session.query(Racer).join(Lane, Racer.id == Lane.racer_id)\
+            .join(Heat, Heat.id == Lane.heat_id)\
+            .join(Round, Round.id == Heat.round_id)\
+            .filter(Round.event_id == event_id).distinct().all()
+    
+    # Update or create standings for each racer
+    for racer in racers_with_results:
+        # Check if standing already exists
+        standing = Standing.query.filter_by(event_id=event_id, racer_id=racer.id).first()
+        if not standing:
+            standing = Standing(event_id=event_id, racer_id=racer.id)
+            db.session.add(standing)
+        
+        # Calculate total points
+        total_points = racer.calculate_points(event_id)
+        standing.total_points = total_points
+        
+        # Calculate best time
+        best_time = racer.calculate_best_time(event_id)
+        standing.best_time = best_time
+        
+        # Calculate race count and wins
+        race_results = RaceResult.query.join(Lane).join(Heat).join(Round)\
+            .filter(RaceResult.racer_id == racer.id, Round.event_id == event_id).all()
+        
+        standing.race_count = len(race_results)
+        standing.wins = sum(1 for result in race_results if result.position == 1)
+        
+        # Calculate average time
+        valid_times = [result.time for result in race_results if result.time is not None]
+        if valid_times:
+            standing.average_time = sum(valid_times) / len(valid_times)
+        
+        # Update timestamp
+        standing.last_updated = datetime.utcnow()
+    
+    # Commit changes to get all standings updated
+    db.session.commit()
+    
+    # Now calculate ranks based on points
+    standings = Standing.query.filter_by(event_id=event_id).order_by(Standing.total_points.desc()).all()
+    
+    # Assign ranks (handle ties by giving same rank)
+    current_rank = 1
+    previous_points = None
+    
+    for i, standing in enumerate(standings):
+        if previous_points is not None and standing.total_points != previous_points:
+            current_rank = i + 1
+        
+        standing.rank = current_rank
+        previous_points = standing.total_points
+    
+    # Commit final ranks
+    db.session.commit()
 
 def generate_race_schedule(event, racers, round_count, lane_count):
     """Generate a race schedule for an event

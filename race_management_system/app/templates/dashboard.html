@@ -78,5 +78,75 @@
             </div>
         </div>
     </div>
+    
+    <!-- On Deck Section -->
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <div class="d-flex justify-content-between align-items-center">
+                        <h5 class="card-title mb-0">On Deck</h5>
+                        <a href="{{ url_for('on_deck.on_deck') }}" class="btn btn-sm btn-dark">Full View</a>
+                    </div>
+                </div>
+                <div class="card-body">
+                    {% if current_heat %}
+                    <div class="alert alert-primary">
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>Now Racing:</strong> {{ current_heat.round.name }} - Heat {{ current_heat.number }}
+                                <div>{{ current_heat.round.event.name }}</div>
+                            </div>
+                            <a href="{{ url_for('main.heat_detail', heat_id=current_heat.id) }}" class="btn btn-sm btn-primary">View Details</a>
+                        </div>
+                    </div>
+                    {% endif %}
+                    
+                    {% if next_heat %}
+                    <div class="mb-3">
+                        <h6>Next Up:</h6>
+                        <div class="card">
+                            <div class="card-body">
+                                <div class="d-flex justify-content-between align-items-center">
+                                    <div>
+                                        <strong>{{ next_heat.round.name }} - Heat {{ next_heat.number }}</strong>
+                                        <div>{{ next_heat.round.event.name }}</div>
+                                    </div>
+                                    <a href="{{ url_for('main.heat_detail', heat_id=next_heat.id) }}" class="btn btn-sm btn-outline-primary">View Details</a>
+                                </div>
+                                
+                                <div class="mt-3">
+                                    <h6>Lane Assignments:</h6>
+                                    <div class="table-responsive">
+                                        <table class="table table-sm table-bordered">
+                                            <thead class="table-light">
+                                                <tr>
+                                                    <th>Lane</th>
+                                                    <th>Racer</th>
+                                                    <th>Car #</th>
+                                                </tr>
+                                            </thead>
+                                            <tbody>
+                                                {% for lane in next_heat_lanes %}
+                                                <tr>
+                                                    <td><strong>{{ lane.lane_number }}</strong></td>
+                                                    <td>{{ lane.racer.name }}</td>
+                                                    <td>{{ lane.racer.car_number }}</td>
+                                                </tr>
+                                                {% endfor %}
+                                            </tbody>
+                                        </table>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    {% else %}
+                    <p class="text-muted">No upcoming heats scheduled.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
 </div>
 {% endblock %}

@@ -25,41 +25,73 @@
             </div>
         </div>
         <div class="col-md-4 text-end">
-            {% if heat.status == 'scheduled' %}
-            <button class="btn btn-success" id="startHeatBtn">Start Heat</button>
-            {% elif heat.status == 'in_progress' %}
-            <button class="btn btn-primary" id="completeHeatBtn">Complete Heat</button>
-            {% endif %}
+            <div class="btn-group">
+                {% if heat.status == 'scheduled' %}
+                <button class="btn btn-success" id="startHeatBtn">Start Heat</button>
+                {% elif heat.status == 'in_progress' %}
+                <button class="btn btn-primary" id="completeHeatBtn">Complete Heat</button>
+                {% endif %}
+                <a href="{{ url_for('export.export_heat_results', heat_id=heat.id) }}" class="btn btn-secondary"><i class="fas fa-file-excel"></i> Export Results</a>
+            </div>
         </div>
     </div>
 
+    {% if heat.status == 'scheduled' or heat.status == 'in_progress' %}
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <div class="card bg-light">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Preparation Countdown</h5>
+                </div>
+                <div class="card-body text-center">
+                    <div id="countdownDisplay">
+                        <h2 id="countdown" class="display-4 mb-3">5:00</h2>
+                        <p class="lead">Time until race start</p>
+                    </div>
+                    <div class="mt-3">
+                        <button id="resetCountdownBtn" class="btn btn-outline-primary">Reset Countdown</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
     <div class="row">
-        <div class="col-md-6">
+        <div class="col-md-12 mb-4">
             <div class="card">
-                <div class="card-header">
+                <div class="card-header bg-warning text-dark">
                     <h5 class="card-title mb-0">Lane Assignments</h5>
                 </div>
                 <div class="card-body">
                     {% if lanes %}
-                        <div class="table-responsive">
-                            <table class="table">
-                                <thead>
-                                    <tr>
-                                        <th>Lane</th>
-                                        <th>Racer</th>
-                                        <th>Car #</th>
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    {% for lane in lanes %}
-                                    <tr>
-                                        <td>{{ lane.lane_number }}</td>
-                                        <td>{{ lane.racer.name }}</td>
-                                        <td>{{ lane.racer.car_number }}</td>
-                                    </tr>
-                                    {% endfor %}
-                                </tbody>
-                            </table>
+                        <div class="row">
+                            {% for lane in lanes %}
+                            <div class="col-md-3 mb-3">
+                                <div class="card h-100 {% if heat.status == 'in_progress' %}border-primary{% endif %}">
+                                    <div class="card-header text-center bg-light">
+                                        <h4 class="mb-0">Lane {{ lane.lane_number }}</h4>
+                                    </div>
+                                    <div class="card-body text-center">
+                                        <h5>{{ lane.racer.name }}</h5>
+                                        <div class="badge bg-secondary mb-2">Car #{{ lane.racer.car_number }}</div>
+                                        {% if lane.result and lane.result.time %}
+                                        <div class="mt-2">
+                                            <span class="badge {% if lane.result.position == 1 %}bg-warning text-dark{% elif lane.result.position == 2 %}bg-secondary{% elif lane.result.position == 3 %}bg-danger{% else %}bg-info{% endif %} p-2">
+                                                {% if lane.result.position == 1 %}🏆 1st{% elif lane.result.position == 2 %}🥈 2nd{% elif lane.result.position == 3 %}🥉 3rd{% else %}{{ lane.result.position }}th{% endif %}
+                                            </span>
+                                        </div>
+                                        <div class="mt-2">
+                                            <strong>Time:</strong> {{ lane.result.time|round(3) }}s
+                                        </div>
+                                        <div>
+                                            <strong>Points:</strong> {{ lane.result.points }}
+                                        </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
                         </div>
                     {% else %}
                         <p class="text-muted">No lane assignments for this heat.</p>
@@ -100,12 +132,12 @@
                             </table>
                         </div>
                     {% elif heat.status == 'in_progress' %}
-                        <form id="raceResultForm">
+                        <form id="raceResultForm" method="POST" action="{{ url_for('main.record_heat_results', heat_id=heat.id) }}">
                             {% for lane in lanes %}
                             <div class="mb-3">
-                                <label for="time{{ lane.id }}" class="form-label">{{ lane.racer.name }} (Lane {{ lane.lane_number }})</label>
+                                <label for="time_{{ lane.id }}" class="form-label">{{ lane.racer.name }} (Lane {{ lane.lane_number }})</label>
                                 <div class="input-group">
-                                    <input type="number" step="0.001" class="form-control" id="time{{ lane.id }}" name="time{{ lane.id }}" placeholder="Time in seconds">
+                                    <input type="number" step="0.001" class="form-control" id="time_{{ lane.id }}" name="time_{{ lane.id }}" placeholder="Time in seconds">
                                     <span class="input-group-text">seconds</span>
                                 </div>
                             </div>
@@ -128,26 +160,137 @@
         const startHeatBtn = document.getElementById('startHeatBtn');
         const completeHeatBtn = document.getElementById('completeHeatBtn');
         const raceResultForm = document.getElementById('raceResultForm');
+        const resetCountdownBtn = document.getElementById('resetCountdownBtn');
+        const countdownElement = document.getElementById('countdown');
         
+        // Countdown functionality
+        let timeLeft = 300; // 5 minutes in seconds
+        let countdownInterval;
+        
+        function startCountdown() {
+            // Clear any existing interval
+            if (countdownInterval) {
+                clearInterval(countdownInterval);
+            }
+            
+            // Reset time to 5 minutes
+            timeLeft = 300;
+            updateCountdownDisplay();
+            
+            // Start the countdown
+            countdownInterval = setInterval(function() {
+                timeLeft--;
+                updateCountdownDisplay();
+                
+                if (timeLeft <= 0) {
+                    clearInterval(countdownInterval);
+                    countdownElement.classList.add('text-success');
+                }
+            }, 1000);
+        }
+        
+        function updateCountdownDisplay() {
+            const minutes = Math.floor(timeLeft / 60);
+            const seconds = timeLeft % 60;
+            countdownElement.textContent = `${minutes}:${seconds < 10 ? '0' : ''}${seconds}`;
+            
+            // Change color based on time remaining
+            if (timeLeft <= 60) { // Last minute
+                countdownElement.classList.remove('text-primary', 'text-warning');
+                countdownElement.classList.add('text-danger');
+            } else if (timeLeft <= 120) { // Last 2 minutes
+                countdownElement.classList.remove('text-primary', 'text-danger');
+                countdownElement.classList.add('text-warning');
+            } else {
+                countdownElement.classList.remove('text-warning', 'text-danger');
+                countdownElement.classList.add('text-primary');
+            }
+        }
+        
+        // Initialize countdown if element exists
+        if (countdownElement) {
+            startCountdown();
+        }
+        
+        // Reset countdown button
+        if (resetCountdownBtn) {
+            resetCountdownBtn.addEventListener('click', function() {
+                startCountdown();
+            });
+        }
+        
+        // Heat control buttons
         if (startHeatBtn) {
             startHeatBtn.addEventListener('click', function() {
-                // TODO: Implement heat start functionality
-                alert('Heat start functionality will be implemented');
+                if (confirm('Are you sure you want to start this heat?')) {
+                    // Show loading state
+                    startHeatBtn.disabled = true;
+                    startHeatBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Starting...';
+                    
+                    // Call the API to start the heat
+                    fetch(`/api/heats/{{ heat.id }}/start`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        credentials: 'same-origin'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // Reload the page to show updated status
+                            window.location.reload();
+                        } else {
+                            alert(data.message || 'Failed to start heat');
+                            startHeatBtn.disabled = false;
+                            startHeatBtn.textContent = 'Start Heat';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while starting the heat');
+                        startHeatBtn.disabled = false;
+                        startHeatBtn.textContent = 'Start Heat';
+                    });
+                }
             });
         }
         
         if (completeHeatBtn) {
             completeHeatBtn.addEventListener('click', function() {
-                // TODO: Implement heat completion functionality
-                alert('Heat completion functionality will be implemented');
-            });
-        }
-        
-        if (raceResultForm) {
-            raceResultForm.addEventListener('submit', function(e) {
-                e.preventDefault();
-                // TODO: Implement result submission
-                alert('Result submission functionality will be implemented');
+                if (confirm('Are you sure you want to complete this heat?')) {
+                    // Show loading state
+                    completeHeatBtn.disabled = true;
+                    completeHeatBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Completing...';
+                    
+                    // Call the API to complete the heat
+                    fetch(`/api/heats/{{ heat.id }}/complete`, {
+                        method: 'POST',
+                        headers: {
+                            'Content-Type': 'application/json',
+                            'X-Requested-With': 'XMLHttpRequest'
+                        },
+                        credentials: 'same-origin'
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.status === 'success') {
+                            // Redirect to the results recording page
+                            window.location.href = `/heats/{{ heat.id }}/record-results`;
+                        } else {
+                            alert(data.message || 'Failed to complete heat');
+                            completeHeatBtn.disabled = false;
+                            completeHeatBtn.textContent = 'Complete Heat';
+                        }
+                    })
+                    .catch(error => {
+                        console.error('Error:', error);
+                        alert('An error occurred while completing the heat');
+                        completeHeatBtn.disabled = false;
+                        completeHeatBtn.textContent = 'Complete Heat';
+                    });
+                }
             });
         }
     });

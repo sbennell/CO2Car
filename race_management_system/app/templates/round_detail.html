@@ -24,11 +24,14 @@
             </div>
         </div>
         <div class="col-md-4 text-end">
-            {% if round.status == 'pending' %}
-            <button class="btn btn-success">Start Round</button>
-            {% elif round.status == 'in_progress' %}
-            <button class="btn btn-primary">Complete Round</button>
-            {% endif %}
+            <div class="btn-group">
+                {% if round.status == 'pending' %}
+                <button class="btn btn-success">Start Round</button>
+                {% elif round.status == 'in_progress' %}
+                <button class="btn btn-primary">Complete Round</button>
+                {% endif %}
+                <a href="{{ url_for('export.export_round_results', round_id=round.id) }}" class="btn btn-secondary"><i class="fas fa-file-excel"></i> Export Results</a>
+            </div>
         </div>
     </div>
 
