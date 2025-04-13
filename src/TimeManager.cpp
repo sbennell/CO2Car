@@ -1,26 +1,12 @@
 #include "TimeManager.h"
 #include <Arduino.h>
 
-TimeManager::TimeManager() : timeSet(false), lastNTPUpdate(0) {}
+TimeManager::TimeManager() : timeClient(ntpUDP, "pool.ntp.org"), timeSynced(false) {}
 
 void TimeManager::begin() {
-    configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-    
-    // Wait for time to be set (timeout after 10 seconds)
-    int attempts = 0;
-    while (!isTimeSet() && attempts < 20) {
-        delay(500);
-        Serial.print(".");
-        attempts++;
-    }
-    
-    if (isTimeSet()) {
-        Serial.println("\n✅ NTP time synchronized");
-        timeSet = true;
-        lastNTPUpdate = millis();
-    } else {
-        Serial.println("\n❌ Failed to get time from NTP server");
-    }
+    timeClient.begin();
+    timeClient.setTimeOffset(0); // UTC
+    timeSynced = false;
 }
 
 void TimeManager::setTimezone(const char* tz) {
@@ -43,10 +29,25 @@ bool TimeManager::isTimeSet() {
 }
 
 void TimeManager::update() {
-    // Update NTP time every hour
-    if (millis() - lastNTPUpdate >= NTP_UPDATE_INTERVAL) {
-        Serial.println("🕒 Updating NTP time...");
-        configTime(gmtOffset_sec, daylightOffset_sec, ntpServer);
-        lastNTPUpdate = millis();
+    timeClient.update();
+    if (!timeSynced && timeClient.isTimeSet()) {
+        timeSynced = true;
     }
+}
+
+String TimeManager::getFormattedTime() {
+    if (!timeSynced) {
+        return "Time not synced";
+    }
+    
+    time_t now = timeClient.getEpochTime();
+    struct tm *timeinfo = localtime(&now);
+    
+    char timeString[20];
+    strftime(timeString, sizeof(timeString), "%Y-%m-%d %H:%M:%S", timeinfo);
+    return String(timeString);
+}
+
+bool TimeManager::isTimeSynced() {
+    return timeSynced;
 }

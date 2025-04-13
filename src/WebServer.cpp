@@ -7,7 +7,6 @@ WebServer::WebServer(TimeManager& tm, Configuration& cfg, NetworkManager& nm)
       timeManager(tm), raceHistory(tm), config(cfg), networkManager(nm) {}
 
 void WebServer::begin() {
-    scheduler.begin();  // Initialize race scheduler
     if (!LittleFS.begin(false)) {  // First try without formatting
         Serial.println("❌ Error mounting LittleFS, trying to format...");
         if (!LittleFS.format()) {
@@ -42,10 +41,6 @@ void WebServer::begin() {
 }
 
 void WebServer::setupRoutes() {
-    // Serve schedule.html
-    server.on("/schedule.html", HTTP_GET, [](AsyncWebServerRequest *request) {
-        request->send(LittleFS, "/schedule.html", "text/html");
-    });
     // Handle root path
     server.on("/", HTTP_GET, [](AsyncWebServerRequest *request) {
         Serial.println("📄 Serving index.html");
@@ -119,8 +114,6 @@ void WebServer::sendVersionInfo(AsyncWebSocketClient *client) {
 
 void WebServer::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *client,
                                AwsEventType type, void *arg, uint8_t *data, size_t len) {
-    if (!client || !server) return;
-
     switch (type) {
         case WS_EVT_CONNECT: {
             Serial.printf("🔗 WebSocket client #%u connected from %s\n", client->id(), client->remoteIP().toString().c_str());
@@ -128,29 +121,15 @@ void WebServer::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *c
             // Add client to our list
             clients.push_back(client);
             
-            // Queue initial data sends with delays
-            static const int SEND_DELAY = 100;
-            static uint32_t lastSendTime = 0;
-            
-            if (millis() - lastSendTime >= SEND_DELAY) {
-                sendVersionInfo(client);
-                lastSendTime = millis();
-            }
-            
-            if (millis() - lastSendTime >= SEND_DELAY) {
-                sendRaceHistory(client);
-                lastSendTime = millis();
-            }
-            
-            if (millis() - lastSendTime >= SEND_DELAY) {
-                sendNetworkInfo(client);
-                lastSendTime = millis();
-            }
+            // Send initial configuration
+            sendVersionInfo(client);
+            sendRaceHistory(client);
+            sendNetworkInfo(client);
             break;
         }
             
         case WS_EVT_DISCONNECT: {
-            Serial.printf("🔗 WebSocket client #%u disconnected\n", client->id());
+            Serial.printf("🔕 WebSocket client #%u disconnected\n", client->id());
             
             // Remove client from our list
             clients.erase(std::remove_if(clients.begin(), clients.end(),
@@ -161,35 +140,17 @@ void WebServer::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *c
             
         case WS_EVT_DATA: {
             AwsFrameInfo *info = (AwsFrameInfo*)arg;
-            if (!info || !data || len == 0 || len >= 512) {
-                Serial.println("❌ Invalid WebSocket data");
-                return;
-            }
-
-            if (info->final && info->index == 0 && info->len == len) {
-                // Process in chunks if needed
-                const size_t CHUNK_SIZE = 128;
-                char *temp = (char*)malloc(len + 1);
+            if (info->final && info->index == 0 && info->len == len && info->opcode == WS_TEXT) {
+                // Ensure null termination
+                char *message = new char[len + 1];
+                memcpy(message, data, len);
+                message[len] = '\0';
                 
-                if (!temp) {
-                    Serial.println("❌ Failed to allocate memory for WebSocket message");
-                    return;
-                }
+                // Process the message
+                handleWebSocketMessage(client, message);
                 
-                // Copy in chunks
-                size_t remaining = len;
-                size_t offset = 0;
-                while (remaining > 0) {
-                    size_t chunk = min(remaining, CHUNK_SIZE);
-                    memcpy(temp + offset, data + offset, chunk);
-                    remaining -= chunk;
-                    offset += chunk;
-                    yield(); // Allow other tasks to run
-                }
-                
-                temp[len] = 0;
-                handleWebSocketMessage(client, temp);
-                free(temp);
+                // Clean up
+                delete[] message;
             }
             break;
         }
@@ -201,10 +162,7 @@ void WebServer::onWebSocketEvent(AsyncWebSocket *server, AsyncWebSocketClient *c
 }
 
 void WebServer::handleWebSocketMessage(AsyncWebSocketClient *client, const char *data) {
-    if (!client || !data) return;
-
-    // Use heap allocation for large JSON document
-    DynamicJsonDocument doc(1024);
+    StaticJsonDocument<512> doc;
     DeserializationError error = deserializeJson(doc, data);
     
     if (error) {
@@ -214,78 +172,10 @@ void WebServer::handleWebSocketMessage(AsyncWebSocketClient *client, const char 
         Serial.println(data);
         return;
     }
-
-    const char* cmd = doc["cmd"];
-    if (!cmd) {
-        Serial.println("❌ No command in WebSocket message");
-        return;
-    }
     
-    // Race scheduler commands
-    if (strcmp(cmd, "getRacers") == 0) {
-        sendRacerList(client);
-        return;
-    }
-    if (strcmp(cmd, "getSchedule") == 0) {
-        sendSchedule(client);
-        return;
-    }
-    if (strcmp(cmd, "addRacer") == 0) {
-        const char* name = doc["name"];
-        if (!name) {
-            Serial.println("❌ No name provided for addRacer");
-            return;
-        }
-        if (strlen(name) > 50) {
-            Serial.println("❌ Racer name too long");
-            return;
-        }
-        if (scheduler.addRacer(name)) {
-            Serial.print("✅ Added racer: ");
-            Serial.println(name);
-            sendRacerList(nullptr);  // Broadcast to all clients
-        } else {
-            Serial.println("❌ Failed to add racer");
-        }
-        return;
-    }
-    if (strcmp(cmd, "removeRacer") == 0) {
-        int id = doc["id"];
-        if (scheduler.removeRacer(id)) {
-            sendRacerList(nullptr);  // Broadcast to all clients
-            return;
-        }
-        if (strcmp(cmd, "toggleCheckIn") == 0) {
-            int id = doc["id"];
-            auto racers = scheduler.getCheckedInRacers();
-            bool currentState = false;
-            for (const auto& racer : racers) {
-                if (racer.id == id) {
-                    currentState = racer.checkedIn;
-                    break;
-                }
-            }
-            if (currentState) {
-                // TODO: Implement check-out
-            } else {
-                if (scheduler.checkInRacer(id)) {
-                    sendRacerList(nullptr);  // Broadcast to all clients
-                }
-            }
-            return;
-        }
-        if (strcmp(cmd, "generateSchedule") == 0) {
-            if (scheduler.generateSchedule()) {
-                sendSchedule(nullptr);  // Broadcast to all clients
-            }
-            return;
-        }
-    }
-
-    // Then check for legacy commands
     const char* command = doc["command"];
     if (!command) {
-        Serial.println("❌ No valid command found in message");
+        Serial.println("❌ No command in message");
         return;
     }
 
@@ -453,66 +343,6 @@ void WebServer::setCommandHandler(CommandHandler handler) {
     commandHandler = handler;
 }
 
-
-
-void WebServer::sendRacerList(AsyncWebSocketClient *client) {
-    // Calculate required size
-    const size_t racerCount = scheduler.getCheckedInRacers().size();
-    const size_t estimatedSize = JSON_OBJECT_SIZE(2) +  // Root object
-                                JSON_ARRAY_SIZE(racerCount) +  // Racers array
-                                racerCount * JSON_OBJECT_SIZE(3) +  // Racer objects
-                                racerCount * 64;  // String buffer for names
-
-    DynamicJsonDocument doc(estimatedSize);
-    doc["type"] = "racerList";
-    JsonArray racerArray = doc.createNestedArray("racers");
-    
-    auto racers = scheduler.getCheckedInRacers();
-    for (const auto& racer : racers) {
-        if (doc.memoryUsage() + JSON_OBJECT_SIZE(3) + racer.name.length() + 32 > estimatedSize) {
-            Serial.println("⚠ Memory limit reached, truncating racer list");
-            break;
-        }
-        JsonObject racerObj = racerArray.createNestedObject();
-        racerObj["id"] = racer.id;
-        racerObj["name"] = racer.name;
-        racerObj["checkedIn"] = racer.checkedIn;
-    }
-    
-    if (client) {
-        String output;
-        serializeJson(doc, output);
-        client->text(output.c_str());
-    } else {
-        broadcastJson(doc);
-    }
-}
-
-void WebServer::sendSchedule(AsyncWebSocketClient *client) {
-    StaticJsonDocument<4096> doc;
-    doc["type"] = "schedule";
-    JsonArray scheduleArray = doc.createNestedArray("schedule");
-    
-    auto races = scheduler.getUpcomingRaces(50);  // Get up to 50 races
-    for (const auto& race : races) {
-        JsonObject raceObj = scheduleArray.createNestedObject();
-        raceObj["round"] = race.round;
-        raceObj["heat"] = race.heat;
-        raceObj["lane1Racer"] = race.lane1Racer;
-        raceObj["lane2Racer"] = race.lane2Racer;
-        raceObj["completed"] = race.completed;
-        raceObj["scheduledTime"] = race.scheduledTime;
-    }
-    
-    if (client) {
-        String output;
-        serializeJson(doc, output);
-        client->text(output);
-    } else {
-        broadcastJson(doc);
-    }
-}
-
 void WebServer::sendNetworkInfo(AsyncWebSocketClient *client) {
     StaticJsonDocument<200> doc;
     doc["type"] = "network_status";
@@ -530,6 +360,11 @@ void WebServer::sendNetworkInfo(AsyncWebSocketClient *client) {
 void WebServer::notifyNetworkStatus() {
     StaticJsonDocument<200> doc;
     doc["type"] = "network_status";
-    doc["isConnected"] = networkManager.isConnected();
+    doc["mode"] = networkManager.isAPMode() ? "AP" : "Station";
+    doc["connected"] = networkManager.isConnected();
+    doc["ssid"] = networkManager.getSSID();
+    doc["ip"] = networkManager.getIP();
+    doc["rssi"] = networkManager.getRSSI();
+    
     broadcastJson(doc);
 }

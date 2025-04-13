@@ -91,10 +91,6 @@
   - [x] Sensor thresholds
   - [x] Race timing parameters
   - [x] System calibration
-- [ ] Implement offline functionality
-  - [ ] Cache static assets
-  - [ ] Local race history storage
-  - [ ] Reconnection handling
 
 ### User Interface
 - [x] LED status indicators
@@ -111,14 +107,6 @@
   - [x] Fair tie detection with 2ms tolerance
   - [x] Real-time tie detection and handling
   - [x] Race timing optimization (network paused during races)
-
-- [ ] Web Interface Testing
-  - [ ] Page load performance (<500ms)
-  - [ ] WebSocket latency (<50ms)
-  - [ ] Race timing accuracy display
-  - [ ] Mobile responsiveness
-  - [ ] Touch input reliability
-  - [ ] Cross-browser compatibility
 
 - [x] Network Testing
   - [x] WiFi connection stability
@@ -148,26 +136,8 @@
   - [x] Initialize SD card module
   - [x] Test read/write operations
   - [x] Implement error handling for card failures
-  - [ ] Create backup/restore functionality
 
-- [x] Data Storage Features
-  - [x] Extended race history storage
-    - [x] Detailed race data logging
-    - [ ] CSV export functionality
-    - [ ] Race statistics generation
-  - [ ] System configuration backup
-    - [ ] Save/load configuration files
-    - [ ] Multiple configuration profiles
-  - [ ] Diagnostic logging
-    - [ ] System event logging
-    - [ ] Error tracking
-    - [ ] Performance metrics
 
-- [ ] SD Card Management
-  - [ ] Implement file rotation for logs
-  - [ ] Storage space monitoring
-  - [ ] Data cleanup utilities
-  - [ ] Safe card ejection handling
 - [x] ESPAsyncWebServer for web interface (me-no-dev/ESPAsyncWebServer)
 - [x] AsyncTCP for WebSocket support (me-no-dev/AsyncTCP)
 - [x] LittleFS for file system (built-in ESP32)
@@ -178,24 +148,11 @@
 ## Race Management System
 
 ### Race Scheduling
-- [x] Basic racer management
-  - [x] Add/remove racers
-  - [x] Check-in system
-  - [x] Persistent storage
-  - [x] Error handling
-
 - [ ] Implement Young and Pope "Partial Perfect-N" charts
-  - [x] Create race schedule generator framework
-  - [x] Support variable number of racers
+  - [ ] Create race schedule generator
+  - [ ] Support variable number of racers
   - [ ] Calculate optimal heat assignments
   - [ ] Generate round-robin matchups
-  - [ ] Lane balancing algorithm
-
-- [ ] Schedule Management
-  - [x] Save/load schedules
-  - [x] Track race completion
-  - [ ] Handle schedule modifications
-  - [ ] Support schedule resumption
 
 ### Real-time Standings
 - [ ] Implement standings calculation system
