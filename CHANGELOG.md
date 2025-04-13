@@ -2,29 +2,42 @@
 
 All notable changes to this project will be documented in this file.
 
-The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
-and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+---
+
+## [0.9.2] - 2025-04-09
+### Added
+- **SD Card Storage**:
+  - Implemented daily race history files (YYYY-MM-DD.json)
+  - Each daily file contains an array of all races from that day
+  - Improved race history organization and management
+
+### Changed
+- **Race History**:
+  - Modified SD card storage to use one file per day instead of one file per race
+  - Enhanced race data organization for better analysis
+  - Reduced number of files on SD card
+
+## [0.9.1] - 2025-04-09
+### Changed
+- Switched to local hosting of bootstrap.min.css and bootstrap.bundle.min.js for improved reliability
+- Removed CDN dependencies for core web interface functionality
 
 ---
 
-## [0.9.0] - 2024-04-13
-
+## [0.9.0] - 2025-04-09
 ### Added
-- SD card storage system for race data persistence
-- Race data saved in JSON format with timestamps
-- SD card status monitoring and error handling
-- Automatic creation of races directory
-- Race data backup functionality
-- SD card status indicators in web interface
+- SD card support for race data storage
+- Automatic race history logging to SD card in JSON format
+- Individual race files with timestamps
+- Detailed race data including finish times and winners
+- Graceful fallback when SD card is unavailable
 
 ### Changed
-- Updated race data storage to include SD card backup
-- Enhanced error handling for data storage operations
-- Improved system status reporting to include SD card status
-
-### Fixed
-- Fixed time synchronization issues with NTP client
-- Improved tie detection calculation with proper type casting
+- Moved START button from GPIO5 to GPIO13 to accommodate SD card
+- Added new pin definitions for SD card SPI interface
+- Swapped Buzzer and LED Blue pins:
+  - Buzzer moved to GPIO33 (was GPIO27)
+  - LED Blue moved to GPIO27 (was GPIO33)
 
 ## [0.8.4] - 2025-04-08
 ### Changed

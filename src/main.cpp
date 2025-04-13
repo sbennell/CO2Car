@@ -1,5 +1,5 @@
 /*
---- CO₂ Car Race Timer Version 0.9.0 ESP32 - 13 April 2024 ---
+--- CO₂ Car Race Timer Version 0.9.2 ESP32 - 09 April 2025 ---
 This system uses two VL53L0X distance sensors to time a CO₂-powered car race.
 It measures the time taken for each car to cross the sensor line and declares the winner based on the fastest time.
 
@@ -9,11 +9,9 @@ Features:
 - Web interface for remote race control and monitoring
 - Real-time race status and timing updates via WebSocket
 - Race history storage with up to 50 past races
-- SD card storage for race data persistence
 - RGB LED indicator for race state (waiting, ready, racing, finished)
 - Buzzer feedback at race start and finish
 - Debounced physical buttons for local control
-- Fair tie detection with 2ms tolerance
 
 ESP32 Pin Assignments:
 - I2C: SDA=GPIO21, SCL=GPIO22
@@ -22,27 +20,26 @@ ESP32 Pin Assignments:
 - Relay: GPIO14 (active LOW)
 - Buzzer: GPIO27
 - RGB LED: RED=GPIO25, GREEN=GPIO26, BLUE=GPIO33
-- SD Card: CS=GPIO5, MOSI=GPIO23, MISO=GPIO19, SCK=GPIO18
 
 Web Interface:
 - Real-time race status and timing display
 - Remote load and start controls
 - Race history table with past results
-- System status indicators (WiFi, sensors, SD card)
+- System status indicators (WiFi, sensors)
 - Tie detection with identical times display
-- SD card status and data management
 */
 
 #include <Wire.h>
 #include <VL53L0X.h>
 #include <ArduinoJson.h>
+#include <SD.h>
+#include <SPI.h>
 #include "NetworkManager.h"
 #include "WebServer.h"
 #include "Version.h"
 #include "TimeManager.h"
 #include "Configuration.h"
 #include "Debug.h"
-#include "SDCardManager.h"
 
 // Function prototypes
 void setLEDState(String state);
@@ -51,29 +48,33 @@ void checkFinish();
 void declareWinner();
 void connectToWiFi();
 void handleWebSocketCommand(const char* command);
-void saveRaceToSD();
+bool initSDCard();
+bool writeRaceToSD(unsigned long car1Time, unsigned long car2Time, const char* winner);
 
 // Global instances
 TimeManager timeManager;
 Configuration config;
 NetworkManager networkManager(config);
 WebServer webServer(timeManager, config, networkManager);
-SDCardManager sdCardManager;
 VL53L0X sensor1;
 VL53L0X sensor2;
 
 // Pin Definitions
 #define LOAD_BUTTON_PIN 4
-#define START_BUTTON_PIN 5
+#define START_BUTTON_PIN 13
 #define XSHUT1 16
 #define XSHUT2 17
 #define RELAY_PIN 14  // Changed back to GPIO14 per pin assignments
-#define BUZZER_PIN 27
+#define SD_SCK 18
+#define SD_MISO 19
+#define SD_MOSI 23
+#define SD_CS 5
+#define BUZZER_PIN 33
 
 // RGB LED Pins
 const int LED_RED = 25;
 const int LED_GREEN = 26;
-const int LED_BLUE = 33;
+const int LED_BLUE = 27;
 
 // Race State Variables
 unsigned long startTime;
@@ -103,19 +104,88 @@ void handleWebSocketCommand(const char* command) {
     }
 }
 
+bool initSDCard() {
+    if (!SD.begin(SD_CS)) {
+        Serial.println("❌ SD card initialization failed!");
+        return false;
+    }
+    Serial.println("✅ SD card initialized.");
+    
+    // Check if race_history directory exists, create if not
+    if (!SD.exists("/race_history")) {
+        SD.mkdir("/race_history");
+        Serial.println("📁 Created race_history directory");
+    }
+    return true;
+}
+
+bool writeRaceToSD(unsigned long car1Time, unsigned long car2Time, const char* winner) {
+    // Create a JSON document for the race data
+    StaticJsonDocument<200> raceDoc;
+    raceDoc["timestamp"] = timeManager.getEpochTime();
+    raceDoc["car1_time"] = car1Time / 1000.0;
+    raceDoc["car2_time"] = car2Time / 1000.0;
+    raceDoc["winner"] = winner;
+    
+    // Get current date for filename
+    struct tm timeinfo;
+    if (!getLocalTime(&timeinfo)) {
+        Serial.println("❌ Failed to get local time");
+        return false;
+    }
+    
+    // Create filename in format YYYY-MM-DD.json
+    char dateStr[11];
+    strftime(dateStr, sizeof(dateStr), "%Y-%m-%d", &timeinfo);
+    String filename = "/race_history/" + String(dateStr) + ".json";
+    
+    // Open or create the daily file
+    File dailyFile = SD.open(filename, FILE_READ);
+    StaticJsonDocument<4096> dailyDoc;
+    
+    if (dailyFile) {
+        // File exists, read existing races
+        DeserializationError error = deserializeJson(dailyDoc, dailyFile);
+        dailyFile.close();
+        
+        if (error) {
+            Serial.println("❌ Failed to parse existing daily file, creating new one");
+            dailyDoc.clear();
+            dailyDoc.to<JsonArray>();
+        }
+    } else {
+        // File doesn't exist, create new array
+        dailyDoc.to<JsonArray>();
+    }
+    
+    // Add new race to the array
+    JsonArray races = dailyDoc.as<JsonArray>();
+    races.add(raceDoc);
+    
+    // Write updated file
+    dailyFile = SD.open(filename, FILE_WRITE);
+    if (!dailyFile) {
+        Serial.println("❌ Failed to open daily file for writing");
+        return false;
+    }
+    
+    if (serializeJson(dailyDoc, dailyFile) == 0) {
+        Serial.println("❌ Failed to write race data");
+        dailyFile.close();
+        return false;
+    }
+    
+    dailyFile.close();
+    Serial.println("✅ Race data saved to SD: " + filename);
+    return true;
+}
+
 void setup() {
     Serial.begin(115200);
     Serial.println("\n=== CO₂ Car Race Timer ===");
     Serial.printf("Version: %s (Built: %s)\n", "0.8.3", "08-04-2025");
     Serial.println("=========================");
     Serial.println("Initializing system...");
-
-    // Initialize SD card
-    if (sdCardManager.begin()) {
-        Serial.println("✔ SD card initialized successfully");
-    } else {
-        Serial.printf("❌ SD card initialization failed: %s\n", sdCardManager.getLastError().c_str());
-    }
 
     // Initialize LEDC for buzzer
     ledcSetup(0, 2000, 8);  // Channel 0, 2000 Hz, 8-bit resolution
@@ -137,6 +207,12 @@ void setup() {
     // Initialize configuration (after LittleFS is mounted)
     config.begin();
 
+    // Initialize SPI for SD card
+    SPI.begin(SD_SCK, SD_MISO, SD_MOSI, SD_CS);
+    if (!initSDCard()) {
+        Serial.println("⚠️ System will continue without SD card logging");
+    }
+    
     Wire.begin(21, 22);  // SDA = 21, SCL = 22
     delay(100);
 
@@ -380,24 +456,6 @@ void checkFinish() {
 
 void declareWinner() {
     pauseUpdates = false;
-    raceStarted = false;
-    carsLoaded = false;
-    
-    // Create JSON document for race data
-    StaticJsonDocument<512> raceData;
-    raceData["timestamp"] = timeManager.getFormattedTime();
-    raceData["car1_time"] = car1Time;
-    raceData["car2_time"] = car2Time;
-    raceData["winner"] = (car1Time < car2Time) ? "Car 1" : "Car 2";
-    raceData["is_tie"] = (abs((long)car1Time - (long)car2Time) <= 2);
-
-    // Save race data to SD card
-    if (sdCardManager.saveRaceData(raceData)) {
-        Serial.println("✔ Race data saved to SD card");
-    } else {
-        Serial.printf("❌ Failed to save race data: %s\n", sdCardManager.getLastError().c_str());
-    }
-
     Serial.println("\n🎉 Race Finished!");
 
     ledcWriteTone(0, 2000);
@@ -406,13 +464,20 @@ void declareWinner() {
 
     // Times have already been adjusted for ties in checkFinish()
     // Just determine the winner based on final times
+    const char* winner;
     if (car1Time == car2Time) {
         Serial.println("🤝 It's a tie!");
+        winner = "tie";
     } else if (car1Time < car2Time) {
         Serial.println("🏆 Car 1 Wins!");
+        winner = "car1";
     } else {
         Serial.println("🏆 Car 2 Wins!");
+        winner = "car2";
     }
+    
+    // Save race data to SD card
+    writeRaceToSD(car1Time, car2Time, winner);
 
     Serial.print("📊 RESULT: C1=");
     Serial.print(car1Time);
@@ -426,6 +491,7 @@ void declareWinner() {
     Serial.println("\n🔄 Getting ready for next race...");
     delay(2000);
     setLEDState("finished");
+    raceStarted = false;
     Serial.println("\nPress 'L' via Serial or press the load button to load cars.");
 }
 
