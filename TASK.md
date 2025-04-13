@@ -151,17 +151,21 @@
   - [x] Create RESTful API endpoints
   - [x] Implement WebSocket support for real-time updates
   - [x] Design database schema (SQLite/PostgreSQL)
-  - [ ] Create user authentication system
-  - [ ] Implement session management
+  - [x] Create user authentication system
+  - [x] Implement session management
+  - [x] Add user roles (admin, race official, viewer)
+  - [x] Implement database migrations with Flask-Migrate
 
 ### Frontend Development
 - [x] Create responsive web interface
   - [x] Use modern frontend framework (Bootstrap)
   - [x] Implement real-time race status display
   - [x] Create race control dashboard
-  - [ ] Design results display interface
-  - [ ] Add admin control panel
-  - [ ] Implement mobile-responsive design
+  - [x] Design results display interface
+  - [x] Add admin control panel
+  - [x] Implement mobile-responsive design
+  - [x] Create event management interface
+  - [x] Add event editing and archiving functionality
 
 ### ESP32 Communication
 - [x] Implement serial communication protocol
@@ -201,14 +205,14 @@
   - [ ] Check-in deadline management
 
 ### Race Data Management
-- [ ] Create participant database
-  - [ ] Racer profiles
-  - [ ] Race history per participant
-  - [ ] Performance statistics
-- [ ] Implement results tracking
-  - [ ] Heat results
-  - [ ] Round summaries
-  - [ ] Tournament progression
+- [x] Create participant database
+  - [x] Racer profiles
+  - [x] Race history per participant
+  - [x] Performance statistics
+- [x] Implement results tracking
+  - [x] Heat results
+  - [x] Round summaries
+  - [x] Tournament progression
 - [ ] Results Export System
   - [ ] Spreadsheet export functionality
     - [ ] Individual race results
@@ -235,13 +239,13 @@
   - [x] WiFi configuration portal
   - [x] Connection recovery
 - [x] User interface module (LED states + button control)
-- [ ] Python Backend Components
-  - [ ] Serial communication handler
-  - [ ] WebSocket server
-  - [ ] Database interface
-  - [ ] API endpoints
-  - [ ] Authentication system
-  - [ ] Race management logic
+- [x] Python Backend Components
+  - [x] Serial communication handler
+  - [x] WebSocket server
+  - [x] Database interface
+  - [x] API endpoints
+  - [x] Authentication system
+  - [x] Race management logic
 
 ## Documentation Tasks
 

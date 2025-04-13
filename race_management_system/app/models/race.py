@@ -53,6 +53,10 @@ class Event(db.Model):
     description = db.Column(db.Text)
     status = db.Column(db.String(20), default='upcoming')  # upcoming, active, completed
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    updated_at = db.Column(db.DateTime)
+    creator_id = db.Column(db.Integer, db.ForeignKey('user.id'))
+    is_archived = db.Column(db.Boolean, default=False)
+    archived_at = db.Column(db.DateTime)
     
     # Relationships
     races = db.relationship('Race', backref='event', lazy='dynamic')

@@ -1,0 +1,105 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Events</h1>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newEventModal">Create New Event</button>
+    </div>
+
+    {% if events %}
+        <div class="row">
+            {% for event in events %}
+            <div class="col-md-6 mb-4">
+                <div class="card">
+                    <div class="card-body">
+                        <h5 class="card-title">{{ event.name }}</h5>
+                        <h6 class="card-subtitle mb-2 text-muted">{{ event.date.strftime('%B %d, %Y') if event.date else 'Date not set' }}</h6>
+                        <p class="card-text">
+                            <strong>Location:</strong> {{ event.location }}<br>
+                            <strong>Status:</strong> 
+                            {% if event.date > now %}
+                                <span class="badge bg-primary">Upcoming</span>
+                            {% else %}
+                                <span class="badge bg-success">Completed</span>
+                            {% endif %}
+                        </p>
+                        <div class="d-flex justify-content-between align-items-center">
+                            <a href="{{ url_for('main.event_detail', event_id=event.id) }}" class="btn btn-primary">View Details</a>
+                            {% if current_user.role == 'admin' or event.creator_id == current_user.id %}
+                            <div class="btn-group">
+                                <a href="{{ url_for('main.edit_event', event_id=event.id) }}" class="btn btn-outline-secondary">Edit</a>
+                                <button type="button" class="btn btn-outline-danger" data-bs-toggle="modal" data-bs-target="#deleteEventModal{{ event.id }}">Delete</button>
+                            </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            No events found. Create a new event to get started.
+        </div>
+    {% endif %}
+</div>
+
+<!-- New Event Modal -->
+<div class="modal fade" id="newEventModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Create New Event</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('main.create_event') }}">
+                    <div class="mb-3">
+                        <label for="eventName" class="form-label">Event Name</label>
+                        <input type="text" class="form-control" id="eventName" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="eventDate" class="form-label">Date</label>
+                        <input type="date" class="form-control" id="eventDate" name="date" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="eventLocation" class="form-label">Location</label>
+                        <input type="text" class="form-control" id="eventLocation" name="location" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="eventDescription" class="form-label">Description</label>
+                        <textarea class="form-control" id="eventDescription" name="description" rows="3"></textarea>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Create Event</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+    {% for event in events %}
+    {% if current_user.role == 'admin' or event.creator_id == current_user.id %}
+    <!-- Delete Event Modal -->
+    <div class="modal fade" id="deleteEventModal{{ event.id }}" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">Delete Event</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <p>Are you sure you want to delete the event "{{ event.name }}"?</p>
+                    <p class="text-muted">This action will archive the event and can't be undone.</p>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                    <form method="POST" action="{{ url_for('main.delete_event', event_id=event.id) }}" class="d-inline">
+                        <button type="submit" class="btn btn-danger">Delete Event</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+    {% endfor %}
+{% endblock %}

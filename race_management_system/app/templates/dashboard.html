@@ -1,0 +1,82 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <h1 class="mb-4">Race Control Dashboard</h1>
+    
+    <div class="row">
+        <!-- Recent Events -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Recent Events</h5>
+                </div>
+                <div class="card-body">
+                    {% if events %}
+                        <div class="list-group">
+                            {% for event in events %}
+                            <a href="{{ url_for('main.event_detail', event_id=event.id) }}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">{{ event.name }}</h6>
+                                    <small>{{ event.date.strftime('%Y-%m-%d') if event.date else 'Date not set' }}</small>
+                                </div>
+                                <small>{{ event.location }}</small>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No recent events found.</p>
+                    {% endif %}
+                    <div class="mt-3">
+                        <a href="{{ url_for('main.events') }}" class="btn btn-primary">View All Events</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Upcoming Races -->
+        <div class="col-md-6 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Upcoming Races</h5>
+                </div>
+                <div class="card-body">
+                    {% if upcoming_races %}
+                        <div class="list-group">
+                            {% for race in upcoming_races %}
+                            <a href="{{ url_for('main.race_detail', race_id=race.id) }}" class="list-group-item list-group-item-action">
+                                <div class="d-flex w-100 justify-content-between">
+                                    <h6 class="mb-1">Round {{ race.round_number }} - Heat {{ race.heat_number }}</h6>
+                                    <small>{{ race.start_time.strftime('%H:%M') if race.start_time else 'Not scheduled' }}</small>
+                                </div>
+                                <small>Event: {{ race.event.name }}</small>
+                            </a>
+                            {% endfor %}
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No upcoming races scheduled.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Quick Actions</h5>
+                </div>
+                <div class="card-body">
+                    <div class="d-flex gap-2">
+                        <a href="#" class="btn btn-primary">Start New Race</a>
+                        <a href="{{ url_for('main.racers') }}" class="btn btn-outline-primary">Manage Racers</a>
+                        <a href="{{ url_for('main.events') }}" class="btn btn-outline-primary">View All Events</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

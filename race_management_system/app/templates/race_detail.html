@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.events') }}">Events</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('main.event_detail', event_id=race.event.id) }}">{{ race.event.name }}</a></li>
+            <li class="breadcrumb-item active">Round {{ race.round_number }} - Heat {{ race.heat_number }}</li>
+        </ol>
+    </nav>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Round {{ race.round_number }} - Heat {{ race.heat_number }}</h1>
+            <p class="lead">
+                <strong>Event:</strong> {{ race.event.name }}<br>
+                <strong>Start Time:</strong> {{ race.start_time.strftime('%H:%M') if race.start_time else 'Not started' }}<br>
+                <strong>Status:</strong>
+                {% if race.status == 'scheduled' %}
+                    <span class="badge bg-primary">Scheduled</span>
+                {% elif race.status == 'in_progress' %}
+                    <span class="badge bg-warning">In Progress</span>
+                {% elif race.status == 'completed' %}
+                    <span class="badge bg-success">Completed</span>
+                {% endif %}
+            </p>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if race.status == 'scheduled' %}
+                <button class="btn btn-success" id="startRaceBtn">Start Race</button>
+            {% elif race.status == 'in_progress' %}
+                <button class="btn btn-danger" id="endRaceBtn">End Race</button>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Race Results -->
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Race Results</h5>
+        </div>
+        <div class="card-body">
+            {% if results %}
+                <div class="table-responsive">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Position</th>
+                                <th>Racer</th>
+                                <th>Car Number</th>
+                                <th>Time</th>
+                                <th>Speed</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for result in results %}
+                            <tr>
+                                <td>{{ result.position }}</td>
+                                <td>{{ result.racer.name }}</td>
+                                <td>{{ result.racer.car_number }}</td>
+                                <td>{{ "%.3f"|format(result.time) }}s</td>
+                                <td>{{ "%.2f"|format(result.speed) }} m/s</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted">No results available yet.</p>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Live Race Data -->
+    {% if race.status == 'in_progress' %}
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Live Race Data</h5>
+        </div>
+        <div class="card-body">
+            <div id="liveRaceData">
+                <div class="alert alert-info">
+                    Waiting for race data...
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        {% if race.status == 'in_progress' %}
+            // Connect to WebSocket for live race data
+            const socket = io();
+            
+            socket.on('race_data', function(data) {
+                // Update live race data display
+                const liveDataDiv = document.getElementById('liveRaceData');
+                // Update the display with the new data
+            });
+        {% endif %}
+
+        // Handle race control buttons
+        const startRaceBtn = document.getElementById('startRaceBtn');
+        const endRaceBtn = document.getElementById('endRaceBtn');
+
+        if (startRaceBtn) {
+            startRaceBtn.addEventListener('click', function() {
+                fetch('{{ url_for("main.start_race", race_id=race.id) }}', {
+                    method: 'POST'
+                }).then(function(response) {
+                    if (response.ok) {
+                        location.reload();
+                    }
+                });
+            });
+        }
+
+        if (endRaceBtn) {
+            endRaceBtn.addEventListener('click', function() {
+                fetch('{{ url_for("main.end_race", race_id=race.id) }}', {
+                    method: 'POST'
+                }).then(function(response) {
+                    if (response.ok) {
+                        location.reload();
+                    }
+                });
+            });
+        }
+    });
+</script>
+{% endblock %}
+{% endblock %}

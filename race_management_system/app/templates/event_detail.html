@@ -1,0 +1,106 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.events') }}">Events</a></li>
+            <li class="breadcrumb-item active">{{ event.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ event.name }}</h1>
+            <p class="lead">
+                <strong>Date:</strong> {{ event.date.strftime('%B %d, %Y') if event.date else 'Not set' }}<br>
+                <strong>Location:</strong> {{ event.location }}
+            </p>
+            {% if event.description %}
+                <p>{{ event.description }}</p>
+            {% endif %}
+        </div>
+        <div class="col-md-4 text-end">
+            <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newRaceModal">Add Race</button>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Races</h5>
+        </div>
+        <div class="card-body">
+            {% if races %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Round</th>
+                                <th>Heat</th>
+                                <th>Status</th>
+                                <th>Start Time</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for race in races %}
+                            <tr>
+                                <td>{{ race.round_number }}</td>
+                                <td>{{ race.heat_number }}</td>
+                                <td>
+                                    {% if race.status == 'scheduled' %}
+                                        <span class="badge bg-primary">Scheduled</span>
+                                    {% elif race.status == 'in_progress' %}
+                                        <span class="badge bg-warning">In Progress</span>
+                                    {% elif race.status == 'completed' %}
+                                        <span class="badge bg-success">Completed</span>
+                                    {% endif %}
+                                </td>
+                                <td>{{ race.start_time.strftime('%H:%M') if race.start_time else 'Not scheduled' }}</td>
+                                <td>
+                                    <a href="{{ url_for('main.race_detail', race_id=race.id) }}" class="btn btn-sm btn-primary">View</a>
+                                    {% if race.status == 'scheduled' %}
+                                        <button class="btn btn-sm btn-success">Start Race</button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted">No races have been added to this event yet.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+
+<!-- New Race Modal -->
+<div class="modal fade" id="newRaceModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Race</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('main.create_race', event_id=event.id) }}">
+                    <div class="mb-3">
+                        <label for="roundNumber" class="form-label">Round Number</label>
+                        <input type="number" class="form-control" id="roundNumber" name="round_number" required min="1">
+                    </div>
+                    <div class="mb-3">
+                        <label for="heatNumber" class="form-label">Heat Number</label>
+                        <input type="number" class="form-control" id="heatNumber" name="heat_number" required min="1">
+                    </div>
+                    <div class="mb-3">
+                        <label for="startTime" class="form-label">Start Time</label>
+                        <input type="time" class="form-control" id="startTime" name="start_time" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Race</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

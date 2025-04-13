@@ -1,11 +1,11 @@
 Flask==2.3.3
 Flask-SocketIO==5.3.6
-Flask-SQLAlchemy==3.1.1
+Flask-SQLAlchemy>=3.1.1
 Flask-Login==0.6.3
-SQLAlchemy==2.0.23
+SQLAlchemy>=2.0.40
 pyserial==3.5
 python-dotenv==1.0.0
-Werkzeug==2.3.7
+Werkzeug>=3.0.0
 python-engineio==4.8.0
 python-socketio==5.10.0
 gunicorn==21.2.0

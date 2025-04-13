@@ -1,0 +1,136 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <div class="d-flex justify-content-between align-items-center mb-4">
+        <h1>Racers</h1>
+        <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newRacerModal">Add New Racer</button>
+    </div>
+
+    {% if racers %}
+        <div class="card">
+            <div class="card-body">
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Name</th>
+                                <th>Car Number</th>
+                                <th>Class</th>
+                                <th>Total Races</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for racer in racers %}
+                            <tr>
+                                <td>{{ racer.name }}</td>
+                                <td>{{ racer.car_number }}</td>
+                                <td>{{ racer.group }}</td>
+                                <td>{{ racer.race_results.count() }}</td>
+                                <td>
+                                    <button class="btn btn-sm btn-primary" 
+                                            data-bs-toggle="modal" 
+                                            data-bs-target="#editRacerModal{{ racer.id }}">
+                                        Edit
+                                    </button>
+                                    <button class="btn btn-sm btn-danger"
+                                            data-bs-toggle="modal"
+                                            data-bs-target="#deleteRacerModal{{ racer.id }}">
+                                        Delete
+                                    </button>
+                                </td>
+                            </tr>
+
+                            <!-- Edit Modal for each racer -->
+                            <div class="modal fade" id="editRacerModal{{ racer.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Edit Racer</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <form method="POST" action="{{ url_for('main.edit_racer', racer_id=racer.id) }}">
+                                                <div class="mb-3">
+                                                    <label for="name{{ racer.id }}" class="form-label">Name</label>
+                                                    <input type="text" class="form-control" id="name{{ racer.id }}" 
+                                                           name="name" value="{{ racer.name }}" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="carNumber{{ racer.id }}" class="form-label">Car Number</label>
+                                                    <input type="text" class="form-control" id="carNumber{{ racer.id }}"
+                                                           name="car_number" value="{{ racer.car_number }}" required>
+                                                </div>
+                                                <div class="mb-3">
+                                                    <label for="className{{ racer.id }}" class="form-label">Class</label>
+                                                    <input type="text" class="form-control" id="className{{ racer.id }}"
+                                                           name="class_name" value="{{ racer.group }}" required>
+                                                </div>
+                                                <button type="submit" class="btn btn-primary">Save Changes</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <!-- Delete Modal for each racer -->
+                            <div class="modal fade" id="deleteRacerModal{{ racer.id }}" tabindex="-1">
+                                <div class="modal-dialog">
+                                    <div class="modal-content">
+                                        <div class="modal-header">
+                                            <h5 class="modal-title">Confirm Delete</h5>
+                                            <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                                        </div>
+                                        <div class="modal-body">
+                                            <p>Are you sure you want to delete {{ racer.name }}?</p>
+                                            <form method="POST" action="{{ url_for('main.delete_racer', racer_id=racer.id) }}">
+                                                <button type="submit" class="btn btn-danger">Delete</button>
+                                                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Cancel</button>
+                                            </form>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+    {% else %}
+        <div class="alert alert-info">
+            No racers found. Add a new racer to get started.
+        </div>
+    {% endif %}
+</div>
+
+<!-- New Racer Modal -->
+<div class="modal fade" id="newRacerModal" tabindex="-1">
+    <div class="modal-dialog">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h5 class="modal-title">Add New Racer</h5>
+                <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+            </div>
+            <div class="modal-body">
+                <form method="POST" action="{{ url_for('main.create_racer') }}">
+                    <div class="mb-3">
+                        <label for="name" class="form-label">Name</label>
+                        <input type="text" class="form-control" id="name" name="name" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="carNumber" class="form-label">Car Number</label>
+                        <input type="text" class="form-control" id="carNumber" name="car_number" required>
+                    </div>
+                    <div class="mb-3">
+                        <label for="className" class="form-label">Class</label>
+                        <input type="text" class="form-control" id="className" name="class_name" required>
+                    </div>
+                    <button type="submit" class="btn btn-primary">Add Racer</button>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
