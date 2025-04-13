@@ -50,7 +50,6 @@
 - [x] Develop finish detection and timing capture
 - [x] Add race result storage functionality
 
-
 ### Web Interface
 - [x] Set up ESP32 as web server
   - [x] Configure AsyncWebServer
@@ -95,7 +94,7 @@
 ### User Interface
 - [x] LED status indicators
 - [x] Button controls for local operation
-- [ ] Add configuration options for network settings
+- [x] Add configuration options for network settings
 
 ### Testing & Optimization
 - [x] Core System Testing
@@ -113,16 +112,16 @@
   - [x] Reconnection handling
   - [x] WiFi credential management
   - [x] AP mode transitions
-  - [ ] Offline mode functionality
+  - [x] Offline mode functionality
   - [x] WebSocket reconnection
   - [x] Data persistence
 
-- [ ] Performance Optimization
-  - [ ] Minimize web asset sizes
-  - [ ] Optimize WebSocket messages
-  - [ ] Reduce memory usage
-  - [ ] Cache static content
-  - [ ] Compress data transfers
+- [x] Performance Optimization
+  - [x] Minimize web asset sizes
+  - [x] Optimize WebSocket messages
+  - [x] Reduce memory usage
+  - [x] Cache static content
+  - [x] Compress data transfers
 
 ## Code Structure Tasks
 
@@ -137,7 +136,6 @@
   - [x] Test read/write operations
   - [x] Implement error handling for card failures
 
-
 - [x] ESPAsyncWebServer for web interface (me-no-dev/ESPAsyncWebServer)
 - [x] AsyncTCP for WebSocket support (me-no-dev/AsyncTCP)
 - [x] LittleFS for file system (built-in ESP32)
@@ -145,7 +143,33 @@
 - [x] Bootstrap for responsive UI (served from CDN)
 - [x] Chart.js for race timing visualization (served from CDN)
 
-## Race Management System
+## Race Management System 
+
+### Web Interface with Python Backend
+- [ ] Implement Python-based web application
+  - [ ] Set up Flask/FastAPI backend
+  - [ ] Create RESTful API endpoints
+  - [ ] Implement WebSocket support for real-time updates
+  - [ ] Design database schema (SQLite/PostgreSQL)
+  - [ ] Create user authentication system
+  - [ ] Implement session management
+
+### Frontend Development
+- [ ] Create responsive web interface
+  - [ ] Use modern frontend framework (React/Vue.js)
+  - [ ] Implement real-time race status display
+  - [ ] Create race control dashboard
+  - [ ] Design results display interface
+  - [ ] Add admin control panel
+  - [ ] Implement mobile-responsive design
+
+### ESP32 Communication
+- [ ] Implement serial communication protocol
+  - [ ] Create Python serial interface
+  - [ ] Design message protocol
+  - [ ] Implement error handling
+  - [ ] Add reconnection logic
+  - [ ] Create data synchronization system
 
 ### Race Scheduling
 - [ ] Implement Young and Pope "Partial Perfect-N" charts
@@ -203,14 +227,21 @@
 - [x] Sensor reading module (dual VL53L0X with unique addresses)
 - [x] Race control module (start/finish/timing)
 - [x] Timer functionality module (millisecond precision)
-- [ ] Web server module
-  - [ ] HTTP request handlers
-  - [ ] WebSocket server
-  - [ ] File system for web assets
+- [x] Web server module
+  - [x] HTTP request handlers
+  - [x] WebSocket server
+  - [x] File system for web assets
 - [x] Network connectivity manager
   - [x] WiFi configuration portal
   - [x] Connection recovery
 - [x] User interface module (LED states + button control)
+- [ ] Python Backend Components
+  - [ ] Serial communication handler
+  - [ ] WebSocket server
+  - [ ] Database interface
+  - [ ] API endpoints
+  - [ ] Authentication system
+  - [ ] Race management logic
 
 ## Documentation Tasks
 
