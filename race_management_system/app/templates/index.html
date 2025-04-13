@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>CO2 Car Race Management System</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
+</head>
+<body>
+    <div class="container mt-5">
+        <div class="row justify-content-center">
+            <div class="col-md-8 text-center">
+                <h1 class="display-4 mb-4">CO2 Car Race Management System</h1>
+                <p class="lead">A comprehensive platform for managing CO2 car races and tournaments</p>
+                
+                <div class="mt-5">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-body">
+                                    <h5 class="card-title">Race Control</h5>
+                                    <p class="card-text">Manage races, view live results, and control the race system in real-time.</p>
+                                    <a href="{{ url_for('main.dashboard') }}" class="btn btn-primary">Go to Dashboard</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-body">
+                                    <h5 class="card-title">Race Schedule</h5>
+                                    <p class="card-text">View upcoming races, heats, and participant assignments.</p>
+                                    <a href="{{ url_for('main.events') }}" class="btn btn-primary">View Events</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-body">
+                                    <h5 class="card-title">Racer Management</h5>
+                                    <p class="card-text">Register racers, manage profiles, and track performance.</p>
+                                    <a href="{{ url_for('main.racers') }}" class="btn btn-primary">Manage Racers</a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card mb-4">
+                                <div class="card-body">
+                                    <h5 class="card-title">System Setup</h5>
+                                    <p class="card-text">Configure the race system, connect to hardware, and manage settings.</p>
+                                    <a href="#" class="btn btn-primary">System Settings</a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <footer class="mt-5 text-muted">
+                    <p>CO2 Car Race Management System | &copy; 2025</p>
+                </footer>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0-alpha1/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/socket.io-client@4.6.1/dist/socket.io.min.js"></script>
+    <script src="{{ url_for('static', filename='js/main.js') }}"></script>
+</body>
+</html> 
