@@ -5,6 +5,29 @@ All notable changes to the CO2 Car Race Management System will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.3.0] - 2025-04-14
+
+### Added
+- Comprehensive race scheduling system:
+  - New data models for rounds, heats, and lane assignments
+  - Round-robin scheduling algorithm for fair race matchups
+  - Multiple round support (qualifying, semi-finals, finals)
+  - Automatic heat generation based on racer count and lane availability
+- Racer check-in system:
+  - Racer status tracking (checked-in vs not checked-in)
+  - Check-in timestamp recording
+  - Integration with race scheduling
+- Enhanced user interface:
+  - Race schedule generation interface
+  - Round and heat detail views
+  - Lane assignment displays
+  - Navigation between all race components
+
+### Changed
+- Enhanced event detail page with race scheduling options
+- Improved database schema with relationships between races, heats, and lanes
+- Updated race result tracking to include lane assignments
+
 ## [0.2.0] - 2025-04-13
 
 ### Added

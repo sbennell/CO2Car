@@ -8,12 +8,55 @@ class Racer(db.Model):
     car_number = db.Column(db.String(20), unique=True, nullable=False)
     group = db.Column(db.String(50))
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    checked_in = db.Column(db.Boolean, default=False)
+    check_in_time = db.Column(db.DateTime)
     
     # Relationships
     race_results = db.relationship('RaceResult', backref='racer', lazy='dynamic')
+    lane_assignments = db.relationship('Lane', backref='racer', lazy='dynamic')
     
     def __repr__(self):
         return f'<Racer {self.name} ({self.car_number})>'
+
+class Round(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    event_id = db.Column(db.Integer, db.ForeignKey('event.id'))
+    number = db.Column(db.Integer)
+    name = db.Column(db.String(100))  # e.g., "Qualifying", "Semi-Finals", "Finals"
+    status = db.Column(db.String(20), default='pending')  # pending, in_progress, completed
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    heats = db.relationship('Heat', backref='round', lazy='dynamic', cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<Round {self.number} - {self.name}>'    
+
+class Heat(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    round_id = db.Column(db.Integer, db.ForeignKey('round.id'))
+    number = db.Column(db.Integer)
+    status = db.Column(db.String(20), default='scheduled')  # scheduled, in_progress, completed, cancelled
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    lanes = db.relationship('Lane', backref='heat', lazy='dynamic', cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<Heat {self.number} in Round {self.round_id}>'    
+
+class Lane(db.Model):
+    id = db.Column(db.Integer, primary_key=True)
+    heat_id = db.Column(db.Integer, db.ForeignKey('heat.id'))
+    racer_id = db.Column(db.Integer, db.ForeignKey('racer.id'))
+    lane_number = db.Column(db.Integer)
+    created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    
+    # Relationships
+    result = db.relationship('RaceResult', backref='lane', uselist=False, cascade='all, delete-orphan')
+    
+    def __repr__(self):
+        return f'<Lane {self.lane_number} - Racer {self.racer_id}>'    
 
 class Race(db.Model):
     id = db.Column(db.Integer, primary_key=True)
@@ -22,7 +65,7 @@ class Race(db.Model):
     heat_number = db.Column(db.Integer)
     start_time = db.Column(db.DateTime)
     end_time = db.Column(db.DateTime)
-    status = db.Column(db.String(20), default='scheduled')  # scheduled, completed, cancelled
+    status = db.Column(db.String(20), default='scheduled')  # scheduled, in_progress, completed, cancelled
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     # Relationships
@@ -35,11 +78,13 @@ class RaceResult(db.Model):
     id = db.Column(db.Integer, primary_key=True)
     race_id = db.Column(db.Integer, db.ForeignKey('race.id'))
     racer_id = db.Column(db.Integer, db.ForeignKey('racer.id'))
-    lane = db.Column(db.Integer)
+    lane_id = db.Column(db.Integer, db.ForeignKey('lane.id'))
+    lane_number = db.Column(db.Integer)
     time = db.Column(db.Float)  # time in seconds
     position = db.Column(db.Integer)
     points = db.Column(db.Integer, default=0)
     disqualified = db.Column(db.Boolean, default=False)
+    notes = db.Column(db.Text)
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
     
     def __repr__(self):
@@ -57,9 +102,11 @@ class Event(db.Model):
     creator_id = db.Column(db.Integer, db.ForeignKey('user.id'))
     is_archived = db.Column(db.Boolean, default=False)
     archived_at = db.Column(db.DateTime)
+    lane_count = db.Column(db.Integer, default=2)  # Number of lanes on the track
     
     # Relationships
     races = db.relationship('Race', backref='event', lazy='dynamic')
+    rounds = db.relationship('Round', backref='event', lazy='dynamic', cascade='all, delete-orphan')
     
     def __repr__(self):
         return f'<Event {self.name} ({self.date})>' 

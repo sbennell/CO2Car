@@ -1,0 +1,94 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.events') }}">Events</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('main.event_detail', event_id=event.id) }}">{{ event.name }}</a></li>
+            <li class="breadcrumb-item active">Schedule Races</li>
+        </ol>
+    </nav>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Schedule Races for {{ event.name }}</h1>
+            <p class="lead">
+                Create a race schedule with rounds and heats for this event.
+            </p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Generate Race Schedule</h5>
+                </div>
+                <div class="card-body">
+                    <form method="POST" action="{{ url_for('main.schedule_races', event_id=event.id) }}">
+                        <div class="mb-3">
+                            <label for="roundCount" class="form-label">Number of Rounds</label>
+                            <input type="number" class="form-control" id="roundCount" name="round_count" value="3" min="1" max="10" required>
+                            <div class="form-text">How many rounds of racing (e.g., qualifying, semi-finals, finals)</div>
+                        </div>
+                        <div class="mb-3">
+                            <label for="laneCount" class="form-label">Number of Lanes</label>
+                            <input type="number" class="form-control" id="laneCount" name="lane_count" value="{{ event.lane_count }}" min="2" max="8" required>
+                            <div class="form-text">How many lanes are available on the track</div>
+                        </div>
+                        <button type="submit" class="btn btn-primary">Generate Schedule</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Racer Check-In Status</h5>
+                </div>
+                <div class="card-body">
+                    <p>Total Racers: <strong>{{ racers|length }}</strong></p>
+                    <p>Checked In: <strong>{{ checked_in_count }}</strong></p>
+                    
+                    <div class="table-responsive">
+                        <table class="table table-sm">
+                            <thead>
+                                <tr>
+                                    <th>Name</th>
+                                    <th>Car #</th>
+                                    <th>Status</th>
+                                    <th>Action</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for racer in racers %}
+                                <tr>
+                                    <td>{{ racer.name }}</td>
+                                    <td>{{ racer.car_number }}</td>
+                                    <td>
+                                        {% if racer.checked_in %}
+                                            <span class="badge bg-success">Checked In</span>
+                                        {% else %}
+                                            <span class="badge bg-secondary">Not Checked In</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% if not racer.checked_in %}
+                                            <form method="POST" action="{{ url_for('main.check_in_racer', racer_id=racer.id) }}">
+                                                <button type="submit" class="btn btn-sm btn-primary">Check In</button>
+                                            </form>
+                                        {% endif %}
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

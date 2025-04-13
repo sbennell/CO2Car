@@ -1,0 +1,155 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.events') }}">Events</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('main.event_detail', event_id=heat.round.event.id) }}">{{ heat.round.event.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('main.event_rounds', event_id=heat.round.event.id) }}">Rounds</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('main.round_detail', round_id=heat.round.id) }}">{{ heat.round.name }}</a></li>
+            <li class="breadcrumb-item active">Heat {{ heat.number }}</li>
+        </ol>
+    </nav>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>Heat {{ heat.number }}</h1>
+            <p class="lead">
+                {{ heat.round.name }} - {{ heat.round.event.name }}
+            </p>
+            <div class="mb-3">
+                <span class="badge {% if heat.status == 'scheduled' %}bg-primary{% elif heat.status == 'in_progress' %}bg-warning{% elif heat.status == 'completed' %}bg-success{% else %}bg-danger{% endif %} p-2">
+                    Status: {{ heat.status|capitalize }}
+                </span>
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if heat.status == 'scheduled' %}
+            <button class="btn btn-success" id="startHeatBtn">Start Heat</button>
+            {% elif heat.status == 'in_progress' %}
+            <button class="btn btn-primary" id="completeHeatBtn">Complete Heat</button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Lane Assignments</h5>
+                </div>
+                <div class="card-body">
+                    {% if lanes %}
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Lane</th>
+                                        <th>Racer</th>
+                                        <th>Car #</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for lane in lanes %}
+                                    <tr>
+                                        <td>{{ lane.lane_number }}</td>
+                                        <td>{{ lane.racer.name }}</td>
+                                        <td>{{ lane.racer.car_number }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% else %}
+                        <p class="text-muted">No lane assignments for this heat.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5 class="card-title mb-0">Race Results</h5>
+                </div>
+                <div class="card-body">
+                    {% if heat.status == 'completed' %}
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Position</th>
+                                        <th>Racer</th>
+                                        <th>Time</th>
+                                        <th>Points</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for lane in lanes %}
+                                        {% if lane.result %}
+                                        <tr>
+                                            <td>{{ lane.result.position }}</td>
+                                            <td>{{ lane.racer.name }}</td>
+                                            <td>{{ lane.result.time|round(3) }}s</td>
+                                            <td>{{ lane.result.points }}</td>
+                                        </tr>
+                                        {% endif %}
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% elif heat.status == 'in_progress' %}
+                        <form id="raceResultForm">
+                            {% for lane in lanes %}
+                            <div class="mb-3">
+                                <label for="time{{ lane.id }}" class="form-label">{{ lane.racer.name }} (Lane {{ lane.lane_number }})</label>
+                                <div class="input-group">
+                                    <input type="number" step="0.001" class="form-control" id="time{{ lane.id }}" name="time{{ lane.id }}" placeholder="Time in seconds">
+                                    <span class="input-group-text">seconds</span>
+                                </div>
+                            </div>
+                            {% endfor %}
+                            <button type="submit" class="btn btn-primary">Save Results</button>
+                        </form>
+                    {% else %}
+                        <p class="text-muted">Race has not been completed yet.</p>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const startHeatBtn = document.getElementById('startHeatBtn');
+        const completeHeatBtn = document.getElementById('completeHeatBtn');
+        const raceResultForm = document.getElementById('raceResultForm');
+        
+        if (startHeatBtn) {
+            startHeatBtn.addEventListener('click', function() {
+                // TODO: Implement heat start functionality
+                alert('Heat start functionality will be implemented');
+            });
+        }
+        
+        if (completeHeatBtn) {
+            completeHeatBtn.addEventListener('click', function() {
+                // TODO: Implement heat completion functionality
+                alert('Heat completion functionality will be implemented');
+            });
+        }
+        
+        if (raceResultForm) {
+            raceResultForm.addEventListener('submit', function(e) {
+                e.preventDefault();
+                // TODO: Implement result submission
+                alert('Result submission functionality will be implemented');
+            });
+        }
+    });
+</script>
+{% endblock %}

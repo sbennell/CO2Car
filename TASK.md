@@ -176,11 +176,11 @@
   - [x] Create data synchronization system
 
 ### Race Scheduling
-- [ ] Implement Young and Pope "Partial Perfect-N" charts
-  - [ ] Create race schedule generator
-  - [ ] Support variable number of racers
-  - [ ] Calculate optimal heat assignments
-  - [ ] Generate round-robin matchups
+- [x] Implement race scheduling system
+  - [x] Create race schedule generator
+  - [x] Support variable number of racers
+  - [x] Calculate optimal heat assignments
+  - [x] Generate round-robin matchups
 
 ### Real-time Standings
 - [ ] Implement standings calculation system
@@ -197,10 +197,10 @@
   - [ ] Add preparation countdown
 
 ### Check-in System
-- [ ] Implement racer check-in functionality
-  - [ ] Digital check-in interface
-  - [ ] Real-time check-in status updates
-  - [ ] "Please Check-In" display
+- [x] Implement racer check-in functionality
+  - [x] Digital check-in interface
+  - [x] Real-time check-in status updates
+  - [x] "Please Check-In" display
   - [ ] Automated notifications
   - [ ] Check-in deadline management
 

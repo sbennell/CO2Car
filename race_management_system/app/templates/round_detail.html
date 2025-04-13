@@ -1,0 +1,89 @@
+{% extends "base.html" %}
+
+{% block content %}
+<div class="container">
+    <nav aria-label="breadcrumb">
+        <ol class="breadcrumb">
+            <li class="breadcrumb-item"><a href="{{ url_for('main.events') }}">Events</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('main.event_detail', event_id=round.event.id) }}">{{ round.event.name }}</a></li>
+            <li class="breadcrumb-item"><a href="{{ url_for('main.event_rounds', event_id=round.event.id) }}">Rounds</a></li>
+            <li class="breadcrumb-item active">{{ round.name }}</li>
+        </ol>
+    </nav>
+
+    <div class="row mb-4">
+        <div class="col-md-8">
+            <h1>{{ round.name }}</h1>
+            <p class="lead">
+                Round {{ round.number }} of {{ round.event.name }}
+            </p>
+            <div class="mb-3">
+                <span class="badge {% if round.status == 'pending' %}bg-secondary{% elif round.status == 'in_progress' %}bg-warning{% else %}bg-success{% endif %} p-2">
+                    Status: {{ round.status|capitalize }}
+                </span>
+            </div>
+        </div>
+        <div class="col-md-4 text-end">
+            {% if round.status == 'pending' %}
+            <button class="btn btn-success">Start Round</button>
+            {% elif round.status == 'in_progress' %}
+            <button class="btn btn-primary">Complete Round</button>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-header">
+            <h5 class="card-title mb-0">Heats</h5>
+        </div>
+        <div class="card-body">
+            {% if heats %}
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+                                <th>Heat #</th>
+                                <th>Status</th>
+                                <th>Racers</th>
+                                <th>Actions</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for heat in heats %}
+                            <tr>
+                                <td>{{ heat.number }}</td>
+                                <td>
+                                    <span class="badge {% if heat.status == 'scheduled' %}bg-primary{% elif heat.status == 'in_progress' %}bg-warning{% elif heat.status == 'completed' %}bg-success{% else %}bg-danger{% endif %}">
+                                        {{ heat.status|capitalize }}
+                                    </span>
+                                </td>
+                                <td>
+                                    {% set lanes = heat.lanes.all() %}
+                                    {% if lanes %}
+                                        {% for lane in lanes %}
+                                            <span class="badge bg-info">{{ lane.racer.name }} (Lane {{ lane.lane_number }})</span>
+                                        {% endfor %}
+                                    {% else %}
+                                        <span class="text-muted">No racers assigned</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <a href="{{ url_for('main.heat_detail', heat_id=heat.id) }}" class="btn btn-sm btn-primary">View</a>
+                                    {% if heat.status == 'scheduled' %}
+                                        <button class="btn btn-sm btn-success">Start Heat</button>
+                                    {% elif heat.status == 'in_progress' %}
+                                        <button class="btn btn-sm btn-info">Record Results</button>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% else %}
+                <p class="text-muted">No heats have been created for this round.</p>
+            {% endif %}
+        </div>
+    </div>
+</div>
+{% endblock %}

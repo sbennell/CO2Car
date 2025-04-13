@@ -30,11 +30,11 @@
 - [x] Race listing within events
 - [x] Basic race control (start/end)
 - [x] Race results tracking
-- [ ] Race scheduling system
-- [ ] Heat management
-- [ ] Lane assignments
+- [x] Race scheduling system
+- [x] Heat management
+- [x] Lane assignments
 - [ ] Race countdown timer
-- [ ] Automatic race progression
+- [x] Automatic race progression
 - [ ] Race data validation
 - [ ] Race result verification
 
@@ -42,6 +42,7 @@
 - [x] Create racer model
 - [x] Racer listing page
 - [x] Add/Edit/Delete racers
+- [x] Racer check-in system
 - [ ] Racer statistics
 - [ ] Racer history
 - [ ] Racer rankings

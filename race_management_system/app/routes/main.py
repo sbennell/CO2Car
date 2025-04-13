@@ -1,8 +1,10 @@
 from flask import Blueprint, render_template, redirect, url_for, flash, request, jsonify
 from flask_login import login_required, current_user
-from app.models.race import Event, Race, Racer, RaceResult
+from app.models.race import Event, Race, Racer, RaceResult, Round, Heat, Lane
 from app import db
 from datetime import datetime
+import random
+import math
 
 main_bp = Blueprint('main', __name__)
 
@@ -197,3 +199,163 @@ def create_race(event_id):
     
     flash('Race created successfully')
     return redirect(url_for('main.event_detail', event_id=event_id))
+
+@main_bp.route('/events/<int:event_id>/schedule', methods=['GET', 'POST'])
+@login_required
+def schedule_races(event_id):
+    """Schedule races for an event"""
+    event = Event.query.get_or_404(event_id)
+    
+    if request.method == 'POST':
+        # Get form data
+        round_count = request.form.get('round_count', type=int)
+        lane_count = request.form.get('lane_count', type=int)
+        
+        # Update event lane count
+        event.lane_count = lane_count
+        db.session.commit()
+        
+        # Get checked-in racers
+        racers = Racer.query.filter_by(checked_in=True).all()
+        if not racers:
+            # If no racers are checked in, use all racers
+            racers = Racer.query.all()
+        
+        if not racers:
+            flash('No racers available to schedule races', 'error')
+            return redirect(url_for('main.event_detail', event_id=event_id))
+        
+        # Generate rounds and heats
+        generate_race_schedule(event, racers, round_count, lane_count)
+        
+        flash('Race schedule generated successfully')
+        return redirect(url_for('main.event_detail', event_id=event_id))
+    
+    # Get all racers for the form
+    racers = Racer.query.all()
+    checked_in_count = Racer.query.filter_by(checked_in=True).count()
+    
+    return render_template('schedule_races.html', 
+                           event=event, 
+                           racers=racers, 
+                           checked_in_count=checked_in_count)
+
+@main_bp.route('/events/<int:event_id>/rounds')
+@login_required
+def event_rounds(event_id):
+    """View all rounds for an event"""
+    event = Event.query.get_or_404(event_id)
+    rounds = Round.query.filter_by(event_id=event_id).order_by(Round.number).all()
+    
+    return render_template('event_rounds.html', event=event, rounds=rounds)
+
+@main_bp.route('/rounds/<int:round_id>')
+@login_required
+def round_detail(round_id):
+    """View details of a round including all heats"""
+    round = Round.query.get_or_404(round_id)
+    heats = Heat.query.filter_by(round_id=round_id).order_by(Heat.number).all()
+    
+    return render_template('round_detail.html', round=round, heats=heats)
+
+@main_bp.route('/heats/<int:heat_id>')
+@login_required
+def heat_detail(heat_id):
+    """View details of a heat including lane assignments"""
+    heat = Heat.query.get_or_404(heat_id)
+    lanes = Lane.query.filter_by(heat_id=heat_id).order_by(Lane.lane_number).all()
+    
+    return render_template('heat_detail.html', heat=heat, lanes=lanes)
+
+@main_bp.route('/racers/check-in/<int:racer_id>', methods=['POST'])
+@login_required
+def check_in_racer(racer_id):
+    """Check in a racer for an event"""
+    racer = Racer.query.get_or_404(racer_id)
+    racer.checked_in = True
+    racer.check_in_time = datetime.utcnow()
+    db.session.commit()
+    
+    flash(f'Racer {racer.name} checked in successfully')
+    return redirect(request.referrer or url_for('main.racers'))
+
+def generate_race_schedule(event, racers, round_count, lane_count):
+    """Generate a race schedule for an event
+    
+    This function creates rounds and heats for an event based on the number of racers
+    and the number of lanes available. It uses a round-robin algorithm to ensure
+    each racer competes against different opponents in each round.
+    
+    Args:
+        event: The Event object
+        racers: List of Racer objects
+        round_count: Number of rounds to generate
+        lane_count: Number of lanes available
+    """
+    # Delete any existing rounds for this event
+    existing_rounds = Round.query.filter_by(event_id=event.id).all()
+    for round_obj in existing_rounds:
+        db.session.delete(round_obj)
+    db.session.commit()
+    
+    # Create rounds
+    rounds = []
+    for round_num in range(1, round_count + 1):
+        round_name = "Qualifying" if round_num == 1 else f"Round {round_num}"
+        if round_num == round_count:
+            round_name = "Finals"
+        
+        new_round = Round(
+            event_id=event.id,
+            number=round_num,
+            name=round_name,
+            status='pending'
+        )
+        db.session.add(new_round)
+        db.session.flush()  # Get the ID without committing
+        rounds.append(new_round)
+    
+    # Calculate number of heats needed
+    racer_count = len(racers)
+    heats_per_round = math.ceil(racer_count / lane_count)
+    
+    # Shuffle racers for initial assignment
+    shuffled_racers = racers.copy()
+    random.shuffle(shuffled_racers)
+    
+    # Create heats and lane assignments for each round
+    for round_idx, round_obj in enumerate(rounds):
+        # For each round, we'll create a different arrangement of racers
+        if round_idx > 0:
+            # For subsequent rounds, rotate racers to create new matchups
+            # This is a simple round-robin algorithm
+            first = shuffled_racers[0]
+            last = shuffled_racers[-1]
+            shuffled_racers = [first] + [shuffled_racers[i] for i in range(racer_count-1, 0, -1)]
+            shuffled_racers[-1] = last
+        
+        # Create heats for this round
+        for heat_num in range(1, heats_per_round + 1):
+            new_heat = Heat(
+                round_id=round_obj.id,
+                number=heat_num,
+                status='scheduled'
+            )
+            db.session.add(new_heat)
+            db.session.flush()  # Get the ID without committing
+            
+            # Assign racers to lanes in this heat
+            start_idx = (heat_num - 1) * lane_count
+            end_idx = min(start_idx + lane_count, racer_count)
+            
+            for lane_idx, racer_idx in enumerate(range(start_idx, end_idx)):
+                if racer_idx < len(shuffled_racers):
+                    lane = Lane(
+                        heat_id=new_heat.id,
+                        racer_id=shuffled_racers[racer_idx].id,
+                        lane_number=lane_idx + 1
+                    )
+                    db.session.add(lane)
+    
+    # Commit all changes
+    db.session.commit()
