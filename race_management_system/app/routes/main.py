@@ -2,7 +2,7 @@ from flask import Blueprint, render_template, redirect, url_for, flash, request,
 from flask_login import login_required, current_user
 from app.models.race import Event, Race, Racer, RaceResult, Round, Heat, Lane, Standing
 from app import db
-from datetime import datetime
+from datetime import datetime, timedelta
 import random
 import math
 from sqlalchemy import func
@@ -557,6 +557,39 @@ def generate_race_schedule(event, racers, round_count, lane_count):
                         lane_number=lane_idx + 1
                     )
                     db.session.add(lane)
+            
+            # Create a Race object for this heat
+            # Calculate start time based on heat number and round number
+            # Each heat takes 5 minutes, with 15-minute gaps between rounds
+            base_time = datetime.utcnow().replace(minute=0, second=0, microsecond=0)  # Start at the beginning of the hour
+            heat_duration = 5  # minutes
+            round_gap = 15  # minutes
+            
+            start_time = base_time + timedelta(
+                minutes=(round_obj.number - 1) * (heats_per_round * heat_duration + round_gap) + 
+                         (heat_num - 1) * heat_duration
+            )
+            
+            # Create the Race object linked to this event, round, and heat
+            new_race = Race(
+                event_id=event.id,
+                round_number=round_obj.number,
+                heat_number=heat_num,
+                start_time=start_time,
+                status='scheduled'
+            )
+            db.session.add(new_race)
+            db.session.flush()  # Get the ID without committing
+            
+            # Create RaceResult objects for each racer in this heat
+            for lane_idx, racer_idx in enumerate(range(start_idx, end_idx)):
+                if racer_idx < len(shuffled_racers):
+                    race_result = RaceResult(
+                        race_id=new_race.id,
+                        racer_id=shuffled_racers[racer_idx].id,
+                        lane_number=lane_idx + 1
+                    )
+                    db.session.add(race_result)
     
     # Commit all changes
     db.session.commit()

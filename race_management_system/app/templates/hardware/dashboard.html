@@ -67,20 +67,12 @@
                         <div id="hardwareStatusDetails">
                             <div class="d-flex justify-content-between mb-2">
                                 <span>Sensors:</span>
-                                <span class="badge ${data.sensors_calibrated ? 'bg-success' : 'bg-warning'}">
-                                    ${data.sensors_calibrated ? 'Calibrated' : 'Needs Calibration'}
-                                </span>
+                                <span class="badge bg-secondary">Loading...</span>
                             </div>
                             <div class="d-flex justify-content-between mb-2">
                                 <span>Race State:</span>
-                                <span class="badge bg-info">${data.race_state || 'Unknown'}</span>
+                                <span class="badge bg-secondary">Loading...</span>
                             </div>
-                            ${data.sensor_readings ? `
-                            <div class="mt-3">
-                                <h6>Sensor Readings:</h6>
-                                <pre class="bg-light p-2 rounded">${JSON.stringify(data.sensor_readings, null, 2)}</pre>
-                            </div>
-                            ` : ''}
                         </div>
                         {% else %}
                         <div class="d-flex justify-content-between mb-2">
@@ -91,7 +83,7 @@
                         {% endif %}
                     </div>
                     {% if connected %}
-                    <button id="refreshStatusBtn" class="btn btn-primary mt-3">
+                    <button id="refreshStatusBtn" class="btn btn-primary mt-3" onclick="refreshHardwareStatus()">
                         <i class="fas fa-sync"></i> Refresh Status
                     </button>
                     {% endif %}
@@ -113,7 +105,7 @@
                                 <div class="card-body text-center">
                                     <h5 class="card-title">Calibrate Sensors</h5>
                                     <p class="card-text">Calibrate the finish line sensors for accurate detection</p>
-                                    <button id="calibrateBtn" class="btn btn-warning" {% if not connected %}disabled{% endif %}>
+                                    <button id="calibrateBtn" class="btn btn-warning" {% if not connected %}disabled{% endif %} onclick="sendDirectCommand('calibrate')">
                                         <i class="fas fa-tools"></i> Calibrate
                                     </button>
                                 </div>
@@ -124,7 +116,7 @@
                                 <div class="card-body text-center">
                                     <h5 class="card-title">Reset Timer</h5>
                                     <p class="card-text">Reset the race timer to prepare for a new race</p>
-                                    <button id="resetTimerBtn" class="btn btn-danger" {% if not connected %}disabled{% endif %}>
+                                    <button id="resetTimerBtn" class="btn btn-danger" {% if not connected %}disabled{% endif %} onclick="sendDirectCommand('resetTimer')">
                                         <i class="fas fa-redo"></i> Reset Timer
                                     </button>
                                 </div>
@@ -135,8 +127,44 @@
                                 <div class="card-body text-center">
                                     <h5 class="card-title">Test Race Start</h5>
                                     <p class="card-text">Test the starting gate and race timing system</p>
-                                    <button id="testRaceBtn" class="btn btn-success" {% if not connected %}disabled{% endif %}>
+                                    <button id="testRaceBtn" class="btn btn-success" {% if not connected %}disabled{% endif %} onclick="sendDirectCommand('testrace')">
                                         <i class="fas fa-flag-checkered"></i> Test Race
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Set Cars Loaded</h5>
+                                    <p class="card-text">Software button to set cars as loaded (bypass physical button)</p>
+                                    <button id="carLoadedBtn" class="btn btn-info" {% if not connected %}disabled{% endif %} onclick="sendDirectCommand('carLoaded')">
+                                        <i class="fas fa-car"></i> Set Cars Loaded
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4">
+                <div class="card-header bg-danger text-white">
+                    <h5 class="card-title mb-0">Emergency Controls</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Force Reset</h5>
+                                    <p class="card-text">Emergency reset to IDLE state (overrides current state)</p>
+                                    <button id="forceResetBtn" class="btn btn-danger" {% if not connected %}disabled{% endif %} onclick="if(confirm('Are you sure you want to force reset the system?')) sendDirectCommand('forceReset')">
+                                        <i class="fas fa-power-off"></i> Force Reset
                                     </button>
                                 </div>
                             </div>
@@ -197,12 +225,61 @@
                             <input class="form-check-input" type="checkbox" id="autoScrollCheck" checked>
                             <label class="form-check-label" for="autoScrollCheck">Auto-scroll</label>
                         </div>
-                        <button id="clearLogBtn" class="btn btn-sm btn-secondary float-end">
+                        <button id="clearLogBtn" class="btn btn-sm btn-secondary float-end" onclick="clearCommLog()">
                             <i class="fas fa-trash"></i> Clear Log
                         </button>
                     </div>
                     <div id="commLog" class="border p-2 bg-light" style="height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.9rem;">
                         <div class="text-muted">Communication log will appear here...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Direct Command Testing Section -->
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0">Direct Command Testing</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-12 mb-3">
+                            <p class="text-muted">Use these buttons to send direct commands to the ESP32 for testing:</p>
+                            <div class="d-flex flex-wrap gap-2">
+                                <button id="directTestRaceBtn" class="btn btn-outline-primary" onclick="try { sendDirectCommand('testrace'); } catch(e) { console.error('Direct fallback error:', e); }">
+                                    <i class="fas fa-terminal"></i> Direct Test Race
+                                </button>
+                                <button id="directCalibrateBtn" class="btn btn-outline-primary" onclick="try { sendDirectCommand('calibrate'); } catch(e) { console.error('Direct fallback error:', e); }">
+                                    <i class="fas fa-terminal"></i> Direct Calibrate
+                                </button>
+                                <button id="directCarLoadedBtn" class="btn btn-outline-primary" onclick="try { sendDirectCommand('carLoaded'); } catch(e) { console.error('Direct fallback error:', e); }">
+                                    <i class="fas fa-terminal"></i> Direct Cars Loaded
+                                </button>
+                                <button id="directResetTimerBtn" class="btn btn-outline-primary" onclick="try { sendDirectCommand('resetTimer'); } catch(e) { console.error('Direct fallback error:', e); }">
+                                    <i class="fas fa-terminal"></i> Direct Reset Timer
+                                </button>
+                                <button id="directForceResetBtn" class="btn btn-outline-primary" onclick="try { if (confirm('Are you sure you want to force reset?')) sendDirectCommand('forceReset'); } catch(e) { console.error('Direct fallback error:', e); }">
+                                    <i class="fas fa-terminal"></i> Direct Force Reset
+                                </button>
+                                <button id="directPingBtn" class="btn btn-outline-primary" onclick="try { sendDirectCommand('ping'); } catch(e) { console.error('Direct fallback error:', e); }">
+                                    <i class="fas fa-terminal"></i> Direct Ping
+                                </button>
+                                <button id="directStatusBtn" class="btn btn-outline-primary" onclick="try { sendDirectCommand('status'); } catch(e) { console.error('Direct fallback error:', e); }">
+                                    <i class="fas fa-terminal"></i> Direct Status
+                                </button>
+                            </div>
+                        </div>
+                        <div class="col-md-12">
+                            <div class="input-group">
+                                <input type="text" id="customCommandInput" class="form-control" placeholder="Enter custom command...">
+                                <button id="sendCustomCommandBtn" class="btn btn-primary">
+                                    <i class="fas fa-paper-plane"></i> Send Custom Command
+                                </button>
+                            </div>
+                        </div>
                     </div>
                 </div>
             </div>
@@ -220,11 +297,193 @@
 </script>
 
 <script>
+    // Make sendDirectCommand globally accessible
+    async function sendDirectCommand(command) {
+        const templateData = JSON.parse(document.getElementById('template-data').textContent);
+        
+        // Simple log function for when the full addLogMessage might not be defined yet
+        function simpleLog(message, type) {
+            console.log(`[${type}] ${message}`);
+            try {
+                const commLog = document.getElementById('commLog');
+                if (commLog) {
+                    const timestamp = new Date().toLocaleTimeString();
+                    const msgDiv = document.createElement('div');
+                    msgDiv.className = `log-message log-${type}`;
+                    msgDiv.innerHTML = `<span class="log-time">[${timestamp}]</span> <span class="log-content">${message}</span>`;
+                    commLog.appendChild(msgDiv);
+                    
+                    // Auto-scroll if enabled
+                    const autoScrollCheck = document.getElementById('autoScrollCheck');
+                    if (autoScrollCheck && autoScrollCheck.checked) {
+                        commLog.scrollTop = commLog.scrollHeight;
+                    }
+                }
+            } catch (e) {
+                console.error('Error logging to UI:', e);
+            }
+        }
+        
+        if (!templateData.connected) {
+            simpleLog(`Cannot send direct command: Not connected to ESP32`, 'error');
+            return;
+        }
+        
+        // Find the button that was clicked and show loading state
+        let clickedButton = null;
+        const buttonMappings = {
+            'calibrate': 'calibrateBtn',
+            'resetTimer': 'resetTimerBtn',
+            'testrace': 'testRaceBtn',
+            'carLoaded': 'carLoadedBtn',
+            'forceReset': 'forceResetBtn',
+            'ping': 'directPingBtn',
+            'status': 'directStatusBtn'
+        };
+        
+        if (buttonMappings[command]) {
+            clickedButton = document.getElementById(buttonMappings[command]);
+            if (clickedButton) {
+                // Save original content
+                clickedButton.dataset.originalHtml = clickedButton.innerHTML;
+                // Disable and show spinner
+                clickedButton.disabled = true;
+                clickedButton.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Processing...';
+            }
+        }
+        
+        simpleLog(`[DIRECT] Sending direct command: ${command}`, 'info');
+        
+        try {
+            // Make a direct fetch call to the backend
+            const response = await fetch('/api/hardware/direct_command', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({ command: command })
+            });
+            
+            const data = await response.json();
+            simpleLog(`[DIRECT] Command response: ${JSON.stringify(data)}`, data.success ? 'success' : 'error');
+            
+            // Request status update after command
+            setTimeout(() => {
+                fetch('/api/hardware/status')
+                    .then(resp => resp.json())
+                    .then(status => {
+                        simpleLog(`[DIRECT] Status after command: ${JSON.stringify(status)}`, 'info');
+                    })
+                    .catch(err => {
+                        simpleLog(`[DIRECT] Error fetching status: ${err.message}`, 'error');
+                    });
+            }, 500);
+        } catch (error) {
+            simpleLog(`[DIRECT] Error sending command: ${error.message}`, 'error');
+        } finally {
+            // Restore button state
+            if (clickedButton) {
+                setTimeout(() => {
+                    clickedButton.disabled = false;
+                    clickedButton.innerHTML = clickedButton.dataset.originalHtml || clickedButton.innerHTML;
+                }, 1000); // Wait 1 second before re-enabling
+            }
+        }
+    }
+
+    // Simple log function for global access
+    function logMessage(message, type = 'info') {
+        console.log(`[${type}] ${message}`);
+        try {
+            const commLog = document.getElementById('commLog');
+            if (commLog) {
+                const timestamp = new Date().toLocaleTimeString();
+                const msgDiv = document.createElement('div');
+                msgDiv.className = `log-message log-${type}`;
+                msgDiv.innerHTML = `<span class="log-time">[${timestamp}]</span> <span class="log-content">${message}</span>`;
+                commLog.appendChild(msgDiv);
+                
+                // Auto-scroll if enabled
+                const autoScrollCheck = document.getElementById('autoScrollCheck');
+                if (autoScrollCheck && autoScrollCheck.checked) {
+                    commLog.scrollTop = commLog.scrollHeight;
+                }
+            }
+        } catch (e) {
+            console.error('Error logging to UI:', e);
+        }
+    }
+
+    // Refresh hardware status
+    async function refreshHardwareStatus() {
+        console.log('Requesting hardware status update...');
+        logMessage('Requesting hardware status update...', 'info');
+        
+        // Show spinner
+        const refreshBtn = document.getElementById('refreshStatusBtn');
+        if (refreshBtn) {
+            refreshBtn.dataset.originalHtml = refreshBtn.innerHTML;
+            refreshBtn.disabled = true;
+            refreshBtn.innerHTML = '<i class="fas fa-spinner fa-spin"></i> Refreshing...';
+        }
+        
+        try {
+            const response = await fetch('/api/hardware/status');
+            const data = await response.json();
+            console.log('Received status:', data);
+            logMessage('Status update received', 'success');
+            
+            // Also try to request status via WebSocket for a complete update
+            const socket = io.connect();
+            if (socket && socket.connected) {
+                socket.emit('request_hardware_status');
+            }
+        } catch (error) {
+            console.error('Error fetching status:', error);
+            logMessage(`Error fetching status: ${error.message}`, 'error');
+        } finally {
+            // Restore button
+            if (refreshBtn) {
+                setTimeout(() => {
+                    refreshBtn.disabled = false;
+                    refreshBtn.innerHTML = refreshBtn.dataset.originalHtml || '<i class="fas fa-sync"></i> Refresh Status';
+                }, 1000);
+            }
+        }
+    }
+
+    // Clear the communication log
+    function clearCommLog() {
+        console.log('Clearing communication log...');
+        const commLog = document.getElementById('commLog');
+        if (commLog) {
+            commLog.innerHTML = '';
+            logMessage('Log cleared', 'info');
+        }
+    }
+
     document.addEventListener('DOMContentLoaded', function() {
         // Get template variables
         const templateData = JSON.parse(document.getElementById('template-data').textContent);
         
         console.log('DOM loaded, attempting to connect to WebSocket...');
+        
+        // DEBUG: Add handlers to all buttons to detect clicks
+        console.log('[DEBUG] Adding debug click handlers to all buttons...');
+        document.querySelectorAll('button').forEach(button => {
+            // Add a subtle highlight to all buttons to ensure they're visible
+            button.style.boxShadow = '0 0 5px rgba(0, 123, 255, 0.5)';
+            
+            // Store the original click handler
+            const originalClick = button.onclick;
+            
+            // Add our debug handler
+            button.addEventListener('click', function(event) {
+                console.log(`[DEBUG] Button clicked: ${button.textContent.trim()} (id: ${button.id || 'none'})`);
+                // Don't interfere with normal behavior
+            });
+        });
+        console.log('[DEBUG] Debug handlers added to', document.querySelectorAll('button').length, 'buttons');
         
         // Configure Socket.IO connection
         const socket = io({
@@ -248,36 +507,86 @@
         const autoScrollCheck = document.getElementById('autoScrollCheck');
         const clearLogBtn = document.getElementById('clearLogBtn');
         
-        // Add message to log with console output
-        function addLogMessage(message, type = 'info') {
-            const timestamp = new Date().toLocaleTimeString();
-            const msgDiv = document.createElement('div');
-            msgDiv.className = `log-message log-${type}`;
-            msgDiv.innerHTML = `<span class="log-time">[${timestamp}]</span> <span class="log-content">${message}</span>`;
-            
-            commLog.appendChild(msgDiv);
-            console.log(`[${type}] ${message}`);
-            
-            if (autoScrollCheck.checked) {
+        // Make autoScrollCheck apply immediately when checked/unchecked
+        autoScrollCheck.addEventListener('change', function() {
+            console.log('Auto-scroll setting changed:', this.checked);
+            if (this.checked) {
+                // Apply scroll immediately if checked
                 commLog.scrollTop = commLog.scrollHeight;
             }
+        });
+        
+        // Function to display debug connection info
+        function displayDebugConnectionInfo() {
+            logMessage('[DEBUG] Hardware Management page loaded', 'info');
+            
+            // Display connection status from template
+            logMessage(`[DEBUG] Initial connection status: ${templateData.connected ? 'Connected' : 'Disconnected'}`, 'info');
+            
+            // Check if browser supports WebSockets
+            const wsSupported = 'WebSocket' in window;
+            logMessage(`[DEBUG] WebSocket support: ${wsSupported ? 'Yes' : 'No'}`, wsSupported ? 'info' : 'error');
+            
+            // Check if browser supports Fetch API
+            const fetchSupported = 'fetch' in window;
+            logMessage(`[DEBUG] Fetch API support: ${fetchSupported ? 'Yes' : 'No'}`, fetchSupported ? 'info' : 'error');
+            
+            // Display information about buttons
+            const allButtons = document.querySelectorAll('button');
+            const hardwareButtons = [
+                document.getElementById('calibrateBtn'),
+                document.getElementById('resetTimerBtn'),
+                document.getElementById('testRaceBtn'),
+                document.getElementById('carLoadedBtn'),
+                document.getElementById('forceResetBtn')
+            ].filter(btn => btn);
+            
+            logMessage(`[DEBUG] Found ${hardwareButtons.length} hardware control buttons`, 'info');
+            hardwareButtons.forEach(btn => {
+                if (btn) {
+                    logMessage(`[DEBUG] Button: ${btn.textContent.trim()}, Disabled: ${btn.disabled}`, 'info');
+                }
+            });
+            
+            // Test network connectivity to the server
+            fetch('/api/hardware/status')
+                .then(() => {
+                    logMessage('[DEBUG] Network connectivity test: Successful', 'success');
+                })
+                .catch(err => {
+                    logMessage(`[DEBUG] Network connectivity test: Failed - ${err.message}`, 'error');
+                });
         }
+        
+        // Call on page load
+        displayDebugConnectionInfo();
 
         // WebSocket connection handling
         socket.on('connect', () => {
             console.log('WebSocket connected with ID:', socket.id);
-            addLogMessage(`WebSocket connected (ID: ${socket.id})`, 'success');
+            logMessage(`WebSocket connected (ID: ${socket.id})`, 'success');
             
-            if (templateData.connected) {
-                console.log('Requesting initial hardware status...');
-                socket.emit('request_hardware_status');
-                addLogMessage('Requesting initial hardware status...', 'info');
+            // Always request status immediately on connect, not just if templateData.connected
+            console.log('Requesting initial hardware status immediately after connection...');
+            socket.emit('request_hardware_status');
+            logMessage('Requesting initial hardware status...', 'info');
+            
+            // Also try an alternative approach to get status
+            try {
+                fetch('/api/hardware/status')
+                .then(response => response.json())
+                .then(data => {
+                    console.log('Fetched hardware status via HTTP:', data);
+                    logMessage(`Fetched hardware status`, 'info');
+                });
+            } catch (error) {
+                console.error('Error fetching hardware status:', error);
             }
         });
 
         socket.on('connect_error', (error) => {
             console.error('WebSocket connection error:', error);
-            addLogMessage(`WebSocket connection error: ${error.message}`, 'error');
+            logMessage(`WebSocket connection error: ${error.message}`, 'error');
             
             // Try to reconnect after a delay
             setTimeout(() => {
@@ -288,7 +597,7 @@
 
         socket.on('disconnect', (reason) => {
             console.log('WebSocket disconnected:', reason);
-            addLogMessage(`WebSocket disconnected: ${reason}`, 'error');
+            logMessage(`WebSocket disconnected: ${reason}`, 'error');
             
             // Try to reconnect if not already attempting
             if (reason !== 'io client disconnect') {
@@ -302,56 +611,147 @@
         // WebSocket event handlers
         socket.on('hardware_status', (data) => {
             console.log('Received hardware status:', data);
-            addLogMessage(`Hardware status update: ${JSON.stringify(data)}`, 'info');
+            logMessage(`Hardware status update received`, 'info');
             
-            // Update status indicators
-            const statusDisplay = document.getElementById('statusDisplay');
-            const hardwareStatusDetails = document.getElementById('hardwareStatusDetails');
-            
-            if (data.connected) {
-                statusDisplay.innerHTML = `
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Connection Status:</span>
-                        <span class="badge bg-success">Connected</span>
-                    </div>
-                    <div id="hardwareStatusDetails">
+            try {
+                // Update status indicators
+                const statusDisplay = document.getElementById('statusDisplay');
+                
+                if (data.connected) {
+                    // Extract status information with more detailed debugging
+                    let sensorCalibrated = false;
+                    let raceState = 'Unknown';
+                    let sensor1Baseline = null;
+                    let sensor2Baseline = null;
+                    
+                    console.log('Status data structure:', JSON.stringify(data));
+                    
+                    // Check where sensors_calibrated might be located
+                    if (data.status && data.status.sensors_calibrated !== undefined) {
+                        sensorCalibrated = data.status.sensors_calibrated === true;
+                        console.log('Found sensors_calibrated in data.status:', sensorCalibrated);
+                    } else if (data.sensors_calibrated !== undefined) {
+                        sensorCalibrated = data.sensors_calibrated === true;
+                        console.log('Found sensors_calibrated directly in data:', sensorCalibrated);
+                    }
+                    
+                    // Check for race state
+                    if (data.status && data.status.race_state) {
+                        raceState = data.status.race_state;
+                        console.log('Found race_state in data.status:', raceState);
+                    } else if (data.race_state) {
+                        raceState = data.race_state;
+                        console.log('Found race_state directly in data:', raceState);
+                    }
+                    
+                    // Check for sensor baseline readings
+                    if (data.status) {
+                        if (data.status.sensor1_baseline !== undefined) {
+                            sensor1Baseline = data.status.sensor1_baseline;
+                        }
+                        if (data.status.sensor2_baseline !== undefined) {
+                            sensor2Baseline = data.status.sensor2_baseline;
+                        }
+                    }
+                    
+                    // Log what we found
+                    console.log('Extracted status info:', {
+                        sensorCalibrated,
+                        raceState,
+                        sensor1Baseline,
+                        sensor2Baseline
+                    });
+                    
+                    // Update the status display
+                    statusDisplay.innerHTML = `
                         <div class="d-flex justify-content-between mb-2">
-                            <span>Sensors:</span>
-                            <span class="badge ${data.sensors_calibrated ? 'bg-success' : 'bg-warning'}">
-                                ${data.sensors_calibrated ? 'Calibrated' : 'Needs Calibration'}
-                            </span>
+                            <span>Connection Status:</span>
+                            <span class="badge bg-success">Connected</span>
                         </div>
+                        <div id="hardwareStatusDetails">
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Sensors:</span>
+                                <span class="badge ${sensorCalibrated ? 'bg-success' : 'bg-warning'}">
+                                    ${sensorCalibrated ? 'Calibrated' : 'Needs Calibration'}
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Race State:</span>
+                                <span class="badge bg-info">${raceState}</span>
+                            </div>
+                        </div>
+                    `;
+                    
+                    // Add sensor baseline readings if available
+                    if (sensor1Baseline !== null || sensor2Baseline !== null) {
+                        const hardwareStatusDetails = document.getElementById('hardwareStatusDetails');
+                        if (sensor1Baseline !== null) {
+                            hardwareStatusDetails.innerHTML += `
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Sensor 1 Baseline:</span>
+                                    <span>${sensor1Baseline} mm</span>
+                                </div>
+                            `;
+                        }
+                        if (sensor2Baseline !== null) {
+                            hardwareStatusDetails.innerHTML += `
+                                <div class="d-flex justify-content-between mb-2">
+                                    <span>Sensor 2 Baseline:</span>
+                                    <span>${sensor2Baseline} mm</span>
+                                </div>
+                            `;
+                        }
+                    }
+                    
+                    // Check for car loaded status
+                    if (data.status && data.status.cars_loaded !== undefined) {
+                        const carsLoaded = data.status.cars_loaded === true;
+                        const hardwareStatusDetails = document.getElementById('hardwareStatusDetails');
+                        hardwareStatusDetails.innerHTML += `
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Cars Loaded:</span>
+                                <span class="badge ${carsLoaded ? 'bg-success' : 'bg-secondary'}">
+                                    ${carsLoaded ? 'Yes' : 'No'}
+                                </span>
+                            </div>
+                        `;
+                    }
+                } else {
+                    statusDisplay.innerHTML = `
                         <div class="d-flex justify-content-between mb-2">
-                            <span>Race State:</span>
-                            <span class="badge bg-info">${data.race_state || 'Unknown'}</span>
+                            <span>Connection Status:</span>
+                            <span class="badge bg-warning">Disconnected</span>
                         </div>
-                        ${data.sensor_readings ? `
-                        <div class="mt-3">
-                            <h6>Sensor Readings:</h6>
-                            <pre class="bg-light p-2 rounded">${JSON.stringify(data.sensor_readings, null, 2)}</pre>
-                        </div>
-                        ` : ''}
-                    </div>
-                `;
-            } else {
-                statusDisplay.innerHTML = `
-                    <div class="d-flex justify-content-between mb-2">
-                        <span>Connection Status:</span>
-                        <span class="badge bg-warning">Disconnected</span>
-                    </div>
-                    <p class="text-center text-muted">Connect to ESP32 to view status</p>
-                `;
+                        <p class="text-center text-muted">Connect to ESP32 to view status</p>
+                    `;
+                }
+            } catch (error) {
+                console.error('Error updating status display:', error);
+                logMessage(`Error updating status display: ${error.message}`, 'error');
             }
         });
 
         socket.on('sensor_reading', (data) => {
             console.log('Received sensor_reading:', data);
+            // Update UI without overwhelming the log
             updateSensorReadings(data);
+            
+            // Log sensor updates only once per second to avoid flooding
+            const now = Date.now();
+            if (!window.lastSensorLogTime || now - window.lastSensorLogTime > 1000) {
+                logMessage(`Sensor reading: Lane 1: ${data.sensor1}mm, Lane 2: ${data.sensor2}mm`, 'info');
+                window.lastSensorLogTime = now;
+            }
         });
 
         socket.on('esp32_error', (data) => {
             console.error('Received esp32_error:', data);
-            addLogMessage(`ESP32 Error: ${data.message}`, 'error');
+            logMessage(`ESP32 Error: ${data.message}`, 'error');
+        });
+
+        socket.on('command_sent', (data) => {
+            console.log('Command sent:', data);
+            logMessage(`Command sent: ${data.command} - ${data.message}`, 'success');
         });
 
         // Function to update sensor readings
@@ -403,7 +803,7 @@
         // Button handlers
         document.getElementById('refreshPortsBtn').addEventListener('click', async () => {
             try {
-                addLogMessage('Refreshing available ports...', 'info');
+                logMessage('Refreshing available ports...', 'info');
                 const response = await fetch('/hardware/ports');
                 const data = await response.json();
                 
@@ -417,83 +817,89 @@
                     portSelect.appendChild(option);
                 });
                 
-                addLogMessage(`Found ${data.ports.length} ports`, 'success');
+                logMessage(`Found ${data.ports.length} ports`, 'success');
             } catch (error) {
                 console.error('Error refreshing ports:', error);
-                addLogMessage(`Error refreshing ports: ${error.message}`, 'error');
-            }
-        });
-
-        document.getElementById('refreshStatusBtn').addEventListener('click', () => {
-            console.log('Requesting hardware status update...');
-            socket.emit('request_hardware_status');
-            addLogMessage('Requesting hardware status update...', 'info');
-        });
-
-        document.getElementById('calibrateBtn').addEventListener('click', async () => {
-            try {
-                addLogMessage('Starting sensor calibration...', 'info');
-                const response = await fetch('/hardware/calibrate', { method: 'POST' });
-                const data = await response.json();
-                addLogMessage(`Calibration response: ${JSON.stringify(data)}`, 'success');
-            } catch (error) {
-                console.error('Error during calibration:', error);
-                addLogMessage(`Calibration error: ${error.message}`, 'error');
-            }
-        });
-
-        document.getElementById('resetTimerBtn').addEventListener('click', async () => {
-            try {
-                addLogMessage('Resetting timer...', 'info');
-                const response = await fetch('/hardware/reset_timer', { method: 'POST' });
-                const data = await response.json();
-                addLogMessage(`Timer reset response: ${JSON.stringify(data)}`, 'success');
-            } catch (error) {
-                console.error('Error resetting timer:', error);
-                addLogMessage(`Timer reset error: ${error.message}`, 'error');
-            }
-        });
-
-        document.getElementById('testRaceBtn').addEventListener('click', async () => {
-            try {
-                addLogMessage('Starting test race...', 'info');
-                const response = await fetch('/hardware/test_race', { method: 'POST' });
-                const data = await response.json();
-                addLogMessage(`Test race response: ${JSON.stringify(data)}`, 'success');
-            } catch (error) {
-                console.error('Error during test race:', error);
-                addLogMessage(`Test race error: ${error.message}`, 'error');
+                logMessage(`Error refreshing ports: ${error.message}`, 'error');
             }
         });
 
         // Race events
         socket.on('race_start', (data) => {
             console.log('Race started:', data);
-            addLogMessage(`Race started: ${JSON.stringify(data)}`, 'info');
+            logMessage(`Race started: ${JSON.stringify(data)}`, 'info');
         });
 
         socket.on('race_finish', (data) => {
             console.log('Race finished:', data);
-            addLogMessage(`Race finished: ${JSON.stringify(data)}`, 'success');
+            logMessage(`Race finished: ${JSON.stringify(data)}`, 'success');
         });
 
-        // Clear log button
-        clearLogBtn.addEventListener('click', () => {
-            commLog.innerHTML = '';
-            addLogMessage('Log cleared', 'info');
-        });
-
-        // Periodic socket state logging
+        // Setup forced refresh of the log every 500ms to ensure it stays visible
         setInterval(() => {
-            const state = socket.connected ? 'connected' : 'disconnected';
-            console.log(`Socket state check: ${state} (${socket.id})`);
-        }, 10000);
+            const commLog = document.getElementById('commLog');
+            const autoScrollCheck = document.getElementById('autoScrollCheck');
+            if (commLog && autoScrollCheck && autoScrollCheck.checked) {
+                commLog.scrollTop = commLog.scrollHeight;
+            }
+        }, 500);
 
         // Initial connection attempt
         if (!socket.connected) {
             console.log('Initiating WebSocket connection...');
             socket.connect();
         }
+        
+        // Direct command testing functions
+        document.getElementById('directTestRaceBtn').addEventListener('click', () => {
+            sendDirectCommand('testrace');
+        });
+        
+        document.getElementById('directCalibrateBtn').addEventListener('click', () => {
+            sendDirectCommand('calibrate');
+        });
+        
+        document.getElementById('directCarLoadedBtn').addEventListener('click', () => {
+            sendDirectCommand('carLoaded');
+        });
+        
+        document.getElementById('directResetTimerBtn').addEventListener('click', () => {
+            sendDirectCommand('resetTimer');
+        });
+        
+        document.getElementById('directForceResetBtn').addEventListener('click', () => {
+            if (confirm('Are you sure you want to force reset the system?')) {
+                sendDirectCommand('forceReset');
+            }
+        });
+        
+        document.getElementById('directPingBtn').addEventListener('click', () => {
+            sendDirectCommand('ping');
+        });
+        
+        document.getElementById('directStatusBtn').addEventListener('click', () => {
+            sendDirectCommand('status');
+        });
+        
+        // Custom command input
+        document.getElementById('sendCustomCommandBtn').addEventListener('click', () => {
+            const command = document.getElementById('customCommandInput').value.trim();
+            
+            if (!command) {
+                logMessage('[DIRECT] Please enter a command', 'error');
+                return;
+            }
+            
+            sendDirectCommand(command);
+            document.getElementById('customCommandInput').value = '';
+        });
+        
+        // Also allow pressing Enter in the input field
+        document.getElementById('customCommandInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                document.getElementById('sendCustomCommandBtn').click();
+            }
+        });
     });
 </script>
 

@@ -1,6 +1,8 @@
 {
     "check_in": {
         "deadlines": {},
-        "notifications": {}
+        "notifications": {
+            "1": false
+        }
     }
 }

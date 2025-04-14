@@ -4,6 +4,81 @@ All notable changes to the CO2 Car Race Management System will be documented in 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+
+## [0.10.3] - 2025-04-18
+
+### Added
+- Race Scheduling Improvements:
+  - Automatic creation of Race objects when generating a schedule
+  - Creation of RaceResult objects for each racer in a heat
+  - Automatic time calculation for scheduled races
+  - Streamlined race generation process
+  - Lane assignment tracking with race results
+  - Multi-round progression with proper heat status tracking
+- UI Enhancements:
+  - Added racer names next to lane numbers in Live Race Data view
+  - Improved lane identification during active races
+  - Enhanced round/heat structure visualization
+- Race Control Features:
+  - Comprehensive heat management with status tracking
+  - Intuitive race results recording interface 
+  - Lane assignments with racer and car information
+  - Countdown timer with configurable duration
+  - Visual heat progression through qualifying and final rounds
+
+### Fixed
+- Race Detail View:
+  - Fixed error when displaying race results with null time values
+  - Added "Not recorded" indicator for races without timing data
+  - Resolved TypeError in race time formatting for empty results
+  - Improved template error handling for null values
+- Documentation:
+  - Updated race scheduling guide with information about the latest improvements
+  - Added troubleshooting section for users of previous versions
+  - Marked race data validation as complete in task list
+
+### Changed
+- Enhanced race scheduling algorithm with better time distribution
+- Improved race result handling for better data consistency
+- Updated task lists to reflect completed features
+- Enhanced live race visualization with racer identification
+
+## [0.10.2] - 2025-04-17
+
+### Added
+- Enhanced Documentation:
+  - Race scheduling guide with detailed steps for creating rounds and heats
+  - Comprehensive markdown documentation in new doc directory
+  - Explanation of round-robin scheduling algorithm
+  - Tips for optimal race schedule creation
+  - Race day operations guide
+  - Troubleshooting information for common scheduling issues
+
+### Changed
+- Organized documentation in a centralized location
+- Improved explanation of race scheduling process
+
+## [0.10.1] - 2025-04-16
+
+### Added
+- Enhanced Hardware Management Interface:
+  - Direct command functionality for more reliable hardware control
+  - Auto-refreshing log display with improved scrolling behavior
+  - Visual feedback on button actions with loading indicators
+  - Command response handling with detailed logging
+
+### Changed
+- Improved hardware control button implementation using direct command approach
+- Simplified command processing to bypass route conflicts
+- Enhanced logging system with throttled sensor updates to prevent log flooding
+
+### Fixed
+- Resolved hardware control button functionality issues in the hardware management dashboard
+- Fixed auto-scrolling issues in the communication log
+- Addressed route conflicts in backend API endpoints
+- Corrected event handler binding for button interactions
+- Fixed WebSocket event handling to use consistent logging functions
+
 ## [0.10.0] - 2025-04-15
 
 ### Added
@@ -62,6 +137,7 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Enhanced heat detail page with improved countdown UI
 - Added progress bar for visual countdown representation
 - Updated WebSocket implementation for better real-time synchronization
+
 ## [0.7.0] - 2025-04-14
 
 ### Added
@@ -228,10 +304,6 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Password hashing using Werkzeug security
 - Protected routes with login_required decorator
 - CSRF protection in forms
-
-
-
-
 
 ## [Unreleased]
 ### Planned

@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block title %}ESP32 Debug Console{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1>ESP32 Debug Console</h1>
+            <p class="lead">Send direct commands to the ESP32 hardware</p>
+            
+            <div class="alert {% if connected %}alert-success{% else %}alert-warning{% endif %}">
+                <i class="fas {% if connected %}fa-check-circle{% else %}fa-exclamation-triangle{% endif %}"></i>
+                {% if connected %}
+                    Connected to ESP32 on port <strong>{{ port_name }}</strong>
+                {% else %}
+                    Not connected to ESP32 hardware
+                {% endif %}
+            </div>
+            
+            {% if not connected %}
+            <div class="alert alert-info">
+                <i class="fas fa-info-circle"></i>
+                You need to <a href="{{ url_for('hardware.hardware_dashboard') }}">connect to the ESP32</a> before using this debug console.
+            </div>
+            {% endif %}
+        </div>
+    </div>
+    
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Send Raw Command</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('hardware.send_raw_command') }}" method="post">
+                        <div class="mb-3">
+                            <label for="command" class="form-label">Command to send</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="command" name="command" placeholder="Enter command (e.g. testrace, calibrate, ping)" value="{{ command }}" {% if not connected %}disabled{% endif %}>
+                                <button type="submit" class="btn btn-primary" {% if not connected %}disabled{% endif %}>
+                                    <i class="fas fa-paper-plane"></i> Send
+                                </button>
+                            </div>
+                        </div>
+                    </form>
+                    
+                    <div class="mt-4">
+                        <h5>Quick Commands</h5>
+                        <div class="d-flex flex-wrap gap-2">
+                            <form action="{{ url_for('hardware.send_raw_command') }}" method="post" class="d-inline">
+                                <input type="hidden" name="command" value="ping">
+                                <button type="submit" class="btn btn-outline-secondary" {% if not connected %}disabled{% endif %}>ping</button>
+                            </form>
+                            <form action="{{ url_for('hardware.send_raw_command') }}" method="post" class="d-inline">
+                                <input type="hidden" name="command" value="status">
+                                <button type="submit" class="btn btn-outline-secondary" {% if not connected %}disabled{% endif %}>status</button>
+                            </form>
+                            <form action="{{ url_for('hardware.send_raw_command') }}" method="post" class="d-inline">
+                                <input type="hidden" name="command" value="calibrate">
+                                <button type="submit" class="btn btn-outline-secondary" {% if not connected %}disabled{% endif %}>calibrate</button>
+                            </form>
+                            <form action="{{ url_for('hardware.send_raw_command') }}" method="post" class="d-inline">
+                                <input type="hidden" name="command" value="testrace">
+                                <button type="submit" class="btn btn-outline-secondary" {% if not connected %}disabled{% endif %}>testrace</button>
+                            </form>
+                            <form action="{{ url_for('hardware.send_raw_command') }}" method="post" class="d-inline">
+                                <input type="hidden" name="command" value="carLoaded">
+                                <button type="submit" class="btn btn-outline-secondary" {% if not connected %}disabled{% endif %}>carLoaded</button>
+                            </form>
+                            <form action="{{ url_for('hardware.send_raw_command') }}" method="post" class="d-inline">
+                                <input type="hidden" name="command" value="resetTimer">
+                                <button type="submit" class="btn btn-outline-secondary" {% if not connected %}disabled{% endif %}>resetTimer</button>
+                            </form>
+                            <form action="{{ url_for('hardware.send_raw_command') }}" method="post" class="d-inline">
+                                <input type="hidden" name="command" value="forceReset">
+                                <button type="submit" class="btn btn-outline-secondary" {% if not connected %}disabled{% endif %}>forceReset</button>
+                            </form>
+                        </div>
+                    </div>
+                </div>
+            </div>
+            
+            {% if response %}
+            <div class="card mb-4">
+                <div class="card-header bg-success text-white">
+                    <h5 class="card-title mb-0">Response</h5>
+                </div>
+                <div class="card-body">
+                    <p><strong>Command:</strong> <code>{{ command }}</code></p>
+                    <div class="border p-3 bg-light" style="font-family: monospace; white-space: pre-wrap;">{{ response }}</div>
+                </div>
+            </div>
+            {% endif %}
+            
+            <div class="card mb-4">
+                <div class="card-header bg-info text-white">
+                    <h5 class="card-title mb-0">Available Commands</h5>
+                </div>
+                <div class="card-body">
+                    <table class="table">
+                        <thead>
+                            <tr>
+                                <th>Command</th>
+                                <th>Description</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr>
+                                <td><code>ping</code></td>
+                                <td>Simple connectivity test</td>
+                            </tr>
+                            <tr>
+                                <td><code>status</code></td>
+                                <td>Get current system status</td>
+                            </tr>
+                            <tr>
+                                <td><code>calibrate</code></td>
+                                <td>Calibrate the sensors</td>
+                            </tr>
+                            <tr>
+                                <td><code>testrace</code></td>
+                                <td>Start a test race</td>
+                            </tr>
+                            <tr>
+                                <td><code>carLoaded</code></td>
+                                <td>Set cars as loaded</td>
+                            </tr>
+                            <tr>
+                                <td><code>resetTimer</code></td>
+                                <td>Reset the race timer</td>
+                            </tr>
+                            <tr>
+                                <td><code>forceReset</code></td>
+                                <td>Force reset the system</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+            
+            <a href="{{ url_for('hardware.hardware_dashboard') }}" class="btn btn-primary">
+                <i class="fas fa-arrow-left"></i> Back to Hardware Management
+            </a>
+        </div>
+    </div>
+</div>
+{% endblock %} 

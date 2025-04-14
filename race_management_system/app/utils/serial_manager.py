@@ -1,20 +1,26 @@
+import json
 import serial
 import serial.tools.list_ports
 import threading
 import time
-import json
 import logging
 from datetime import datetime
 from flask_socketio import SocketIO
+from flask import current_app
+from app.models.race import Race, RaceResult, Heat
+from app import db
+from flask import _app_ctx_stack
+import importlib
+from app import flask_app
 
 # Set up logging
-logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
+logger.setLevel(logging.INFO)
 
 class SerialManager:
     """
-    Manages serial communication with the ESP32 race timer hardware.
-    Handles sending commands and receiving race timing data.
+    Manages serial communication with the ESP32 hardware
+    Provides methods for sending commands and processing responses
     """
     def __init__(self, socketio=None, baudrate=115200, timeout=1):
         self.serial_port = None
@@ -164,61 +170,120 @@ class SerialManager:
         self.logger.info(f"Received data: {data}")
         
         try:
-            # Parse JSON data
-            json_data = json.loads(data)
-            self.logger.info(f"Parsed JSON: {json_data}")
-            
-            # Force-add the port name to all messages for the frontend
-            json_data['port'] = self.port_name
-            
-            # Always maintain last status for hardware status requests
-            if "type" in json_data and json_data["type"] == "status":
-                self.last_status = json_data
+            # Only try to parse as JSON if the data starts with '{'
+            if data.startswith('{'):
+                # Parse JSON data
+                json_data = json.loads(data)
+                self.logger.info(f"Parsed JSON: {json_data}")
                 
-                # Create hardware status message
-                hardware_status = {
-                    'connected': True,
-                    'port': self.port_name,
-                    'status': json_data
-                }
+                # Force-add the port name to all messages for the frontend
+                json_data['port'] = self.port_name
                 
-                # Emit hardware status update
-                if self.socketio:
-                    self.logger.info(f"Emitting hardware_status: {hardware_status}")
-                    self.socketio.emit('hardware_status', hardware_status)
-            
-            # Handle specific message types
-            if "type" in json_data:
-                msg_type = json_data["type"]
-                
-                # 1. Sensor readings
-                if msg_type == "sensor_reading":
+                # Always maintain last status for hardware status requests
+                if "type" in json_data and json_data["type"] == "status":
+                    self.last_status = json_data
+                    
+                    # Create hardware status message
+                    hardware_status = {
+                        'connected': True,
+                        'port': self.port_name,
+                        'status': json_data
+                    }
+                    
+                    # Emit hardware status update
                     if self.socketio:
-                        self.logger.info(f"Emitting sensor reading: {json_data}")
+                        self.logger.info(f"Emitting hardware_status: {hardware_status}")
+                        self.socketio.emit('hardware_status', hardware_status)
+                
+                # Handle specific message types
+                if "type" in json_data:
+                    msg_type = json_data["type"]
+                    
+                    # 1. Sensor readings
+                    if msg_type == "sensor_reading":
+                        if self.socketio:
+                            self.logger.info(f"Emitting sensor reading: {json_data}")
+                            self.socketio.emit('sensor_reading', json_data)
+                    
+                    # 2. Race events
+                    elif msg_type == "race_start":
+                        if self.socketio:
+                            self.logger.info(f"Emitting race start: {json_data}")
+                            self.socketio.emit('race_start', json_data)
+                    
+                    elif msg_type == "race_update":
+                        if self.socketio:
+                            self.logger.info(f"Emitting race update: {json_data}")
+                            self.socketio.emit('race_update', json_data)
+                    
+                    elif msg_type == "race_result":
+                        if self.socketio:
+                            self.logger.info(f"Emitting race result as race_completed: {json_data}")
+                            self.socketio.emit('race_completed', json_data)
+                            
+                            # Update race results in the database
+                            try:
+                                self.logger.info(f"Updating race results in database: {json_data}")
+                                # Add a race/heat ID to the data if not present
+                                if 'heat_id' not in json_data and 'race_id' not in json_data:
+                                    # Log the race result with a warning about missing IDs
+                                    self.logger.warning(f"Race result received without heat_id or race_id: {json_data}")
+                                    # Try to find the most recent in-progress race
+                                    from app.models.race import Race
+                                    active_race = Race.query.filter_by(status='in_progress').order_by(Race.id.desc()).first()
+                                    if active_race:
+                                        json_data['race_id'] = active_race.id
+                                        self.logger.info(f"Using most recent in-progress race ID: {active_race.id}")
+                                
+                                self._update_race_results(json_data)
+                            except Exception as e:
+                                self.logger.error(f"Error updating race results: {e}")
+                    
+                    elif msg_type == "race_completed":
+                        if self.socketio:
+                            self.logger.info(f"Emitting race completed: {json_data}")
+                            self.socketio.emit('race_completed', json_data)
+                            
+                            # Update race results in the database 
+                            try:
+                                self.logger.info(f"Updating race results in database: {json_data}")
+                                # Add a race/heat ID to the data if not present
+                                if 'heat_id' not in json_data and 'race_id' not in json_data:
+                                    # Log the race result with a warning about missing IDs
+                                    self.logger.warning(f"Race result received without heat_id or race_id: {json_data}")
+                                    # Try to find the most recent in-progress race
+                                    from app.models.race import Race
+                                    active_race = Race.query.filter_by(status='in_progress').order_by(Race.id.desc()).first()
+                                    if active_race:
+                                        json_data['race_id'] = active_race.id
+                                        self.logger.info(f"Using most recent in-progress race ID: {active_race.id}")
+                                
+                                self._update_race_results(json_data)
+                            except Exception as e:
+                                self.logger.error(f"Error updating race results: {e}")
+                    
+                    elif msg_type == "race_finish":
+                        if self.socketio:
+                            self.logger.info(f"Emitting race finish: {json_data}")
+                            self.socketio.emit('race_finish', json_data)
+                    
+                    # 3. Error messages
+                    elif msg_type == "error":
+                        if self.socketio:
+                            self.logger.error(f"ESP32 error: {json_data.get('message', 'Unknown error')}")
+                            self.socketio.emit('esp32_error', json_data)
+                
+                # Fallback for legacy messages
+                elif all(key in json_data for key in ['sensor1', 'sensor2']):
+                    if self.socketio:
+                        self.logger.info(f"Emitting legacy sensor reading: {json_data}")
                         self.socketio.emit('sensor_reading', json_data)
-                
-                # 2. Race events
-                elif msg_type == "race_start":
-                    if self.socketio:
-                        self.logger.info(f"Emitting race start: {json_data}")
-                        self.socketio.emit('race_start', json_data)
-                
-                elif msg_type == "race_finish":
-                    if self.socketio:
-                        self.logger.info(f"Emitting race finish: {json_data}")
-                        self.socketio.emit('race_finish', json_data)
-                
-                # 3. Error messages
-                elif msg_type == "error":
-                    if self.socketio:
-                        self.logger.error(f"ESP32 error: {json_data.get('message', 'Unknown error')}")
-                        self.socketio.emit('esp32_error', json_data)
-            
-            # Fallback for legacy messages
-            elif all(key in json_data for key in ['sensor1', 'sensor2']):
-                if self.socketio:
-                    self.logger.info(f"Emitting legacy sensor reading: {json_data}")
-                    self.socketio.emit('sensor_reading', json_data)
+            else:
+                # It's not JSON, check if it's a boot message or other debug output we can handle
+                if any(boot_msg in data for boot_msg in ['rst:', 'boot:', 'mode:', 'load:', 'entry', 'configsip']):
+                    self.logger.debug(f"ESP32 boot message: {data}")
+                elif data.strip():  # Only log if not empty
+                    self.logger.debug(f"Non-JSON message from ESP32: {data}")
         
         except json.JSONDecodeError as e:
             self.logger.error(f"Error parsing JSON data: {e}")
@@ -238,13 +303,165 @@ class SerialManager:
     
     def _update_race_results(self, race_data):
         """Update race results in the database"""
-        # This will be implemented to update the race results in the database
-        # based on the timing data received from the ESP32
-        pass
+        from app import flask_app
+        from app.models.race import Race, RaceResult
+        from app import db
+        
+        # Enhanced debugging
+        self.logger.info(f"🔍 ATTEMPTING TO UPDATE RACE RESULTS WITH DATA: {race_data}")
+        
+        try:
+            # Use the global flask_app reference
+            with flask_app.app_context():
+                return self._do_update_race_results(race_data)
+        except Exception as e:
+            self.logger.error(f"❌ Error setting up application context: {e}")
+            import traceback
+            self.logger.error(traceback.format_exc())
+            return False
+    
+    def _do_update_race_results(self, race_data):
+        """Internal method to update race results within an application context"""
+        from app.models.race import Race, RaceResult, Heat
+        from app import db
+        
+        race = None
+        
+        # Check if we have a race ID or heat ID
+        if 'race_id' in race_data:
+            race_id = race_data.get('race_id')
+            self.logger.info(f"🔍 Looking up race by race_id: {race_id}")
+            race = Race.query.get(race_id)
+            if race:
+                self.logger.info(f"🔍 Found race with ID {race.id}, status: {race.status}")
+            else:
+                self.logger.error(f"⚠️ No race found with ID {race_id}")
+        elif 'heat_id' in race_data:
+            heat_id = race_data.get('heat_id')
+            self.logger.info(f"🔍 Looking up race by heat_id: {heat_id}")
+            # Need to find the Heat model first, then find the race by the heat and round numbers
+            heat = Heat.query.get(heat_id)
+            if heat:
+                self.logger.info(f"🔍 Found heat with number {heat.number} in round {heat.round.number}")
+                race = Race.query.filter_by(
+                    event_id=heat.round.event_id,
+                    round_number=heat.round.number,
+                    heat_number=heat.number
+                ).first()
+                if race:
+                    self.logger.info(f"🔍 Found race with ID {race.id} for heat {heat_id}, status: {race.status}")
+                else:
+                    self.logger.error(f"⚠️ No race found for heat {heat_id} (round {heat.round.number}, heat {heat.number})")
+            else:
+                self.logger.error(f"⚠️ No heat found with ID {heat_id}")
+        
+        if not race:
+            # Try one more approach - find most recent in-progress race
+            self.logger.warning(f"⚠️ Falling back to most recent in-progress race")
+            race = Race.query.filter_by(status='in_progress').order_by(Race.id.desc()).first()
+            if race:
+                self.logger.info(f"🔍 Found most recent in-progress race: {race.id}")
+            else:
+                self.logger.error(f"❌ Cannot update race results: No race found by any method")
+                return False
+            
+        self.logger.info(f"Updating results for race ID {race.id}")
+        
+        # Get car times, converting from milliseconds to seconds if needed
+        car1_time = race_data.get('car1_time', 0)
+        car2_time = race_data.get('car2_time', 0)
+        
+        # Check if values are large, indicating milliseconds
+        if car1_time > 1000:
+            car1_time /= 1000.0
+        if car2_time > 1000:
+            car2_time /= 1000.0
+        
+        # Determine winner for positions
+        winner = race_data.get('winner', '')
+        
+        # Create/update lane 1 result
+        lane1_result = RaceResult.query.filter_by(race_id=race.id, lane_number=1).first()
+        if not lane1_result:
+            lane1_result = RaceResult(
+                race_id=race.id,
+                lane_number=1,
+                time=car1_time,
+                position=1 if winner == 'car1' else (0 if winner == 'tie' else 2)
+            )
+            db.session.add(lane1_result)
+        else:
+            lane1_result.time = car1_time
+            lane1_result.position = 1 if winner == 'car1' else (0 if winner == 'tie' else 2)
+                
+        # Create/update lane 2 result
+        lane2_result = RaceResult.query.filter_by(race_id=race.id, lane_number=2).first()
+        if not lane2_result:
+            lane2_result = RaceResult(
+                race_id=race.id,
+                lane_number=2,
+                time=car2_time,
+                position=1 if winner == 'car2' else (0 if winner == 'tie' else 2)
+            )
+            db.session.add(lane2_result)
+        else:
+            lane2_result.time = car2_time
+            lane2_result.position = 1 if winner == 'car2' else (0 if winner == 'tie' else 2)
+        
+        # Update race status to completed
+        race.status = 'completed'
+        race.end_time = datetime.utcnow()
+            
+        # Save changes to database
+        try:
+            db.session.commit()
+            self.logger.info(f"Race results updated: Lane 1={car1_time}s, Lane 2={car2_time}s, Winner={winner}")
+            return True
+        except Exception as e:
+            self.logger.error(f"Error updating race results: {e}")
+            db.session.rollback()
+            return False
     
     def start_race(self, heat_id):
         """Send command to start a race for the given heat"""
-        return self.send_command("start_race", {"heat_id": heat_id})
+        try:
+            from app import flask_app
+            
+            # Use the global flask_app reference
+            with flask_app.app_context():
+                return self._do_start_race(heat_id)
+        except Exception as e:
+            self.logger.error(f"Error finding race for heat: {e}")
+            return self.send_command("start_race", {"heat_id": heat_id})
+        
+    def _do_start_race(self, heat_id):
+        """Internal method to start a race within an application context"""
+        try:
+            # Find the heat first
+            from app.models.race import Heat, Race
+            
+            heat = Heat.query.get(heat_id)
+            
+            if not heat:
+                self.logger.error(f"Cannot find heat with ID {heat_id}")
+                return self.send_command("start_race", {"heat_id": heat_id})
+            
+            # Then find the associated race using round and heat numbers
+            race = Race.query.filter_by(
+                event_id=heat.round.event_id,
+                round_number=heat.round.number,
+                heat_number=heat.number
+            ).first()
+            
+            if race:
+                self.logger.info(f"Starting race id {race.id} for heat id {heat_id}")
+                return self.send_command("start_race", {"heat_id": heat_id, "race_id": race.id})
+            else:
+                self.logger.warning(f"No race found for heat id {heat_id}")
+                return self.send_command("start_race", {"heat_id": heat_id})
+        except Exception as e:
+            self.logger.error(f"Error in _do_start_race: {e}")
+            return self.send_command("start_race", {"heat_id": heat_id})
     
     def reset_timer(self):
         """Reset the race timer"""
@@ -264,9 +481,38 @@ class SerialManager:
         else:
             return {'connected': True, 'port': self.port_name}
     
+    def is_connected(self):
+        """Check if the serial manager is connected to hardware"""
+        return self.connected and self.serial_port and self.serial_port.is_open
+    
+    def get_port_name(self):
+        """Get the name of the connected port"""
+        return self.port_name if self.connected else None
+    
+    def get_latest_response(self):
+        """Get the most recent response from the ESP32 for debugging purposes"""
+        if self.last_status:
+            return json.dumps(self.last_status, indent=2)
+        return None
+    
     def calibrate_sensors(self):
         """Calibrate the sensors on the ESP32"""
-        return self.send_command("calibrate")
+        self.logger.info("Calibrating sensors...")
+        
+        # Force request a status update first to ensure communication is working
+        self.send_command("status")
+        time.sleep(0.1)  # Small delay
+        
+        # Send the calibration command
+        result = self.send_command("calibrate")
+        self.logger.info(f"Calibrate command sent, result: {result}")
+        
+        # Log the raw command being sent for debugging
+        cmd_obj = {"cmd": "calibrate"}
+        cmd_str = json.dumps(cmd_obj) + "\n"
+        self.logger.info(f"Raw calibrate command: {cmd_str.strip()}")
+        
+        return result
 
 # Create a singleton instance
 serial_manager = None

@@ -1,0 +1,74 @@
+{% extends "base.html" %}
+
+{% block title %}Hardware Debug{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <h1>Hardware Debug Interface</h1>
+    
+    <div class="row mt-4">
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Connection Status</h5>
+                </div>
+                <div class="card-body">
+                    {% if connected %}
+                        <div class="alert alert-success">
+                            <strong>Connected</strong> to {{ port }}
+                        </div>
+                    {% else %}
+                        <div class="alert alert-danger">
+                            <strong>Not Connected</strong>
+                        </div>
+                        <form action="{{ url_for('hardware.connect_hardware') }}" method="post">
+                            <button type="submit" class="btn btn-primary">Connect to Hardware</button>
+                        </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+        
+        <div class="col-md-6">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Send Raw Command</h5>
+                </div>
+                <div class="card-body">
+                    <form action="{{ url_for('hardware.send_raw_command') }}" method="post">
+                        <div class="form-group">
+                            <input type="text" name="command" class="form-control" placeholder="Enter command" required>
+                        </div>
+                        <button type="submit" class="btn btn-primary mt-2">Send Command</button>
+                    </form>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    {% if response %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="card">
+                <div class="card-header">
+                    <h5>Latest Response</h5>
+                </div>
+                <div class="card-body">
+                    <pre>{{ response }}</pre>
+                </div>
+            </div>
+        </div>
+    </div>
+    {% endif %}
+
+    {% if error %}
+    <div class="row mt-4">
+        <div class="col-12">
+            <div class="alert alert-danger">
+                {{ error }}
+            </div>
+        </div>
+    </div>
+    {% endif %}
+</div>
+{% endblock %} 

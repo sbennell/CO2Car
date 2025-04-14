@@ -15,9 +15,12 @@ db = SQLAlchemy()
 socketio = SocketIO()
 login_manager = LoginManager()
 migrate = Migrate()
+flask_app = None  # Global app instance for use in background threads
 
 def create_app():
+    global flask_app
     app = Flask(__name__)
+    flask_app = app  # Store app globally
     
     # Configure the Flask application
     app.config['SECRET_KEY'] = os.environ.get('SECRET_KEY', 'dev-key-for-development')
