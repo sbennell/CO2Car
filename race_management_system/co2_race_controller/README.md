@@ -465,26 +465,10 @@ The system operates as a state machine with the following states and transitions
 
 ### Potential Upgrades
 
-1. **Hardware Upgrades**
-   - Add WiFi connectivity
-   - Add Bluetooth connectivity
+**Hardware Upgrades**
    - Add display screen
    - Add buzzer for audio feedback
    - Add support for more lanes
-
-2. **Software Upgrades**
-   - Implement race history storage
-   - Add race statistics
-   - Implement race scheduling
-   - Add support for different race formats
-   - Implement race mode selection
-
-3. **User Interface Upgrades**
-   - Add web interface
-   - Add mobile app control
-   - Add voice announcements
-   - Add countdown display
-   - Improve LED feedback system
 
 ### Implementation Considerations
 - Check compatibility with existing hardware
