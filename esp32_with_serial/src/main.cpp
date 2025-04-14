@@ -1,12 +1,12 @@
 /*
---- CO₂ Car Race Timer Version 0.6.0 ESP32 with FreeRTOS - 14 April 2025 ---
+--- CO₂ Car Race Timer Version 0.7.0 ESP32 with Flask Integration - 14 April 2025 ---
 This system uses two VL53L0X distance sensors to time a CO₂-powered car race.
 It measures the time taken for each car to cross the sensor line and declares the winner based on the fastest time.
 
 Features:
 - Two distance sensors (VL53L0X) track the progress of two cars.
 - Relay control to simulate the CO₂ firing mechanism.
-- Serial communication to start the race and display results.
+- JSON-based serial communication for integration with Flask Race Management System.
 - Supports multiple races by resetting after each one.
 - RGB LED indicator to show current race state (waiting, ready, racing, finished).
 - Buzzer feedback at race start and finish for audible cues.
@@ -37,10 +37,18 @@ ESP32 Pin Assignments:
 void setLEDState(String state);
 void startRace();
 void declareWinner();
-void checkFinish();
+void checkFinish(int dist1, int dist2);
 void doStartRace();
 void handleButtons();
 void handleSerialCommands();
+
+// JSON communication prototypes
+void processJsonCommand(const String &jsonString);
+void sendJsonStatus();
+void sendJsonRaceStart(unsigned long timestamp);
+void sendJsonRaceFinish();
+void sendJsonSensorReading(int sensor1Value, int sensor2Value);
+void sendJsonError(const String &errorMessage);
 
 // Task function prototypes
 void racingTask(void *parameter);
@@ -89,6 +97,14 @@ bool carsLoaded = false;
 bool startButtonPressed = false;
 bool startButtonLastState = HIGH;
 bool shouldStartRace = false;
+
+// Race Management System Integration
+String currentHeatId = "";  // Current heat being raced
+bool sensorCalibrated = true;  // Whether sensors are calibrated
+int sensorThreshold = 150;    // Default distance threshold (mm)
+int sensorReadingInterval = 50; // How often to send sensor readings (ms) - more frequent updates
+unsigned long lastSensorReadingTime = 0; // Last time sensors were read
+String serialBuffer = "";    // Buffer for incoming serial data
 
 // Thread-safe serial print
 void serialPrint(const String &message) {
@@ -167,6 +183,10 @@ void setup() {
 
     serialPrintln("\n✅ System Ready!");
     serialPrintln("Press 'L' via Serial or press the load button to load cars.");
+    
+    // Send initial status to race management system (as JSON)
+    delay(500); // Small delay to ensure text output is complete
+    sendJsonStatus();
 
     // Create FreeRTOS tasks
     xTaskCreatePinnedToCore(
@@ -197,6 +217,13 @@ void loop() {
 
 // Core 0: Racing Task - handles race timing and sensor monitoring
 void racingTask(void *parameter) {
+    // Track last status update time
+    unsigned long lastStatusTime = 0;
+    serialPrintln("Racing task initialized and running");
+    
+    // Send an initial status update
+    sendJsonStatus();
+    
     while (true) {
         bool isRacing = false;
         bool shouldCheckFinish = false;
@@ -218,11 +245,34 @@ void racingTask(void *parameter) {
             xSemaphoreGive(raceStateMutex);
         }
 
-        // Check finish if race is active
-        if (shouldCheckFinish) {
-            checkFinish();
+        // Always read sensors and send data, regardless of race state
+        int dist1 = sensor1.readRangeContinuousMillimeters();
+        int dist2 = sensor2.readRangeContinuousMillimeters();
+        
+        // Send periodic sensor updates
+        unsigned long currentMillis = millis();
+        if (currentMillis - lastSensorReadingTime > sensorReadingInterval) {
+            lastSensorReadingTime = currentMillis;
+            if (dist1 != -1 && dist2 != -1) { // Only send valid readings
+                sendJsonSensorReading(dist1, dist2);
+            }
         }
 
+        // Check finish if race is active
+        if (shouldCheckFinish) {
+            // We already have sensor readings, so pass them to checkFinish
+            if (dist1 != -1 && dist2 != -1) { // Only check with valid readings
+                checkFinish(dist1, dist2);
+            }
+        }
+
+        // Send periodic status updates (every 500ms)
+        unsigned long now = millis();
+        if (now - lastStatusTime > 500) { // Send status every 500ms
+            lastStatusTime = now;
+            sendJsonStatus();
+        }
+        
         // Small delay to give other tasks time
         vTaskDelay(5 / portTICK_PERIOD_MS);
     }
@@ -283,39 +333,251 @@ void handleButtons() {
 }
 
 void handleSerialCommands() {
-    char command = Serial.read();
-    
-    if (xSemaphoreTake(serialMutex, portMAX_DELAY) == pdTRUE) {
-        Serial.print("📩 Received Serial Command: ");
-        Serial.println(command);
-        xSemaphoreGive(serialMutex);
-    }
-
-    if (xSemaphoreTake(raceStateMutex, portMAX_DELAY) == pdTRUE) {
-        if (command == 'L') {
-            if (!carsLoaded && !raceStarted) {
-                carsLoaded = true;
-                setLEDState("ready");
-                serialPrintln("🚦 Cars loaded. Press 'S' to start the race.");
-            } else if (carsLoaded) {
-                serialPrintln("⚠ Cars are already loaded.");
-            } else {
-                serialPrintln("⚠ Cannot load cars during a race.");
+    while (Serial.available() > 0) {
+        char c = Serial.read();
+        
+        // Handle both legacy and JSON commands
+        if (c == '{') {
+            // Start of JSON object, clear buffer
+            serialBuffer = c;
+        } else if (c == '}') {
+            // End of JSON object, process the command
+            serialBuffer += c;
+            processJsonCommand(serialBuffer);
+            serialBuffer = "";
+        } else if (c == '\n' || c == '\r') {
+            // End of line, process if we have content
+            if (serialBuffer.length() > 0) {
+                if (serialBuffer.startsWith("{")) {
+                    // JSON command
+                    processJsonCommand(serialBuffer);
+                }
+                serialBuffer = "";
             }
-        }
-
-        if (command == 'S') {
-            if (carsLoaded && !raceStarted) {
-                setLEDState("racing");
-                shouldStartRace = true;
-            } else if (!carsLoaded) {
-                serialPrintln("⚠ Please load the cars first by pressing 'L' or pressing the load button.");
-            } else {
-                serialPrintln("⚠ Race already in progress! Wait for finish.");
-            }
+        } else {
+            // Add to buffer
+            serialBuffer += c;
         }
         
-        xSemaphoreGive(raceStateMutex);
+        // Legacy command support (single char commands)
+        if (serialBuffer.length() == 1 && !serialBuffer.startsWith("{")) {
+            char command = serialBuffer[0];
+            
+            if (xSemaphoreTake(serialMutex, portMAX_DELAY) == pdTRUE) {
+                Serial.print("📩 Received Legacy Command: ");
+                Serial.println(command);
+                xSemaphoreGive(serialMutex);
+            }
+
+            if (xSemaphoreTake(raceStateMutex, portMAX_DELAY) == pdTRUE) {
+                if (command == 'L') {
+                    if (!carsLoaded && !raceStarted) {
+                        carsLoaded = true;
+                        setLEDState("ready");
+                        serialPrintln("🚦 Cars loaded. Press 'S' to start the race.");
+                    } else if (carsLoaded) {
+                        serialPrintln("⚠ Cars are already loaded.");
+                    } else {
+                        serialPrintln("⚠ Cannot load cars during a race.");
+                    }
+                }
+
+                if (command == 'S') {
+                    if (carsLoaded && !raceStarted) {
+                        setLEDState("racing");
+                        shouldStartRace = true;
+                    } else if (!carsLoaded) {
+                        serialPrintln("⚠ Please load the cars first by pressing 'L' or pressing the load button.");
+                    } else {
+                        serialPrintln("⚠ Race already in progress! Wait for finish.");
+                    }
+                }
+                
+                xSemaphoreGive(raceStateMutex);
+            }
+            
+            serialBuffer = ""; // Clear buffer after processing legacy command
+        }
+    }
+}
+
+// Process JSON commands from the race management system
+void processJsonCommand(const String &jsonString) {
+    // Only print debug info in debug mode
+    if (DEBUG && xSemaphoreTake(serialMutex, portMAX_DELAY) == pdTRUE) {
+        Serial.print("📦 Received JSON command: ");
+        Serial.println(jsonString);
+        xSemaphoreGive(serialMutex);
+    }
+    
+    // Parse JSON
+    StaticJsonDocument<512> doc;
+    DeserializationError error = deserializeJson(doc, jsonString);
+    
+    if (error) {
+        sendJsonError("Invalid JSON: " + String(error.c_str()));
+        return;
+    }
+    
+    // Extract command
+    if (!doc.containsKey("cmd")) {
+        sendJsonError("Missing 'cmd' field in JSON");
+        return;
+    }
+    
+    String command = doc["cmd"].as<String>();
+    
+    if (command == "start_race") {
+        // Start a new race
+        if (doc.containsKey("heat_id")) {
+            currentHeatId = doc["heat_id"].as<String>();
+            
+            if (xSemaphoreTake(raceStateMutex, portMAX_DELAY) == pdTRUE) {
+                if (!raceStarted) {
+                    carsLoaded = true;
+                    setLEDState("racing");
+                    shouldStartRace = true;
+                    serialPrintln("🏁 Starting race for heat ID: " + currentHeatId);
+                } else {
+                    sendJsonError("Race already in progress");
+                }
+                xSemaphoreGive(raceStateMutex);
+            }
+        } else {
+            sendJsonError("Missing 'heat_id' field for start_race command");
+        }
+    } 
+    else if (command == "reset_timer") {
+        // Reset the timer
+        if (xSemaphoreTake(raceStateMutex, portMAX_DELAY) == pdTRUE) {
+            raceStarted = false;
+            car1Finished = false;
+            car2Finished = false;
+            carsLoaded = false;
+            setLEDState("waiting");
+            serialPrintln("⏱ Timer reset, ready for new race");
+            xSemaphoreGive(raceStateMutex);
+            sendJsonStatus();
+        }
+    } 
+    else if (command == "status") {
+        // Send current status
+        sendJsonStatus();
+    } 
+    else if (command == "calibrate") {
+        // Calibrate sensors
+        serialPrintln("🔄 Calibrating sensors...");
+        sensorCalibrated = true; // Would do actual calibration here if needed
+        sensorThreshold = 150;   // Default distance threshold
+        sendJsonStatus();
+    } 
+    else {
+        sendJsonError("Unknown command: " + command);
+    }
+}
+
+// JSON communication functions
+void sendJsonStatus() {
+    StaticJsonDocument<512> doc;
+    // The 'type' field is key for serial_manager.py processing
+    doc["type"] = "status";
+    doc["timestamp"] = millis();
+    doc["race_started"] = raceStarted;
+    doc["cars_loaded"] = carsLoaded;
+    doc["car1_finished"] = car1Finished;
+    doc["car2_finished"] = car2Finished;
+    doc["car1_time"] = car1Time;
+    doc["car2_time"] = car2Time;
+    doc["sensor_calibrated"] = sensorCalibrated;
+    doc["current_heat_id"] = currentHeatId;
+    
+    String jsonString;
+    serializeJson(doc, jsonString);
+    
+    // Debug statement to confirm status is being sent
+    static unsigned long lastDebugTime = 0;
+    if (millis() - lastDebugTime > 5000) {  // Debug message every 5 seconds
+        serialPrintln("Sending status: " + jsonString);
+        lastDebugTime = millis();
+    }
+    
+    if (xSemaphoreTake(serialMutex, portMAX_DELAY) == pdTRUE) {
+        Serial.println(jsonString);
+        xSemaphoreGive(serialMutex);
+    }
+}
+
+void sendJsonRaceStart(unsigned long timestamp) {
+    StaticJsonDocument<256> doc;
+    doc["type"] = "race_start";
+    doc["timestamp"] = timestamp;
+    doc["heat_id"] = currentHeatId;
+    
+    String jsonString;
+    serializeJson(doc, jsonString);
+    
+    if (xSemaphoreTake(serialMutex, portMAX_DELAY) == pdTRUE) {
+        Serial.println(jsonString);
+        xSemaphoreGive(serialMutex);
+    }
+}
+
+void sendJsonRaceFinish() {
+    StaticJsonDocument<512> doc;
+    doc["type"] = "race_finish";
+    doc["timestamp"] = millis();
+    doc["heat_id"] = currentHeatId;
+    doc["car1_time"] = car1Time;
+    doc["car2_time"] = car2Time;
+    doc["car1_finished"] = car1Finished;
+    doc["car2_finished"] = car2Finished;
+    
+    if (car1Time < car2Time) {
+        doc["winner"] = 1;
+    } else if (car2Time < car1Time) {
+        doc["winner"] = 2;
+    } else {
+        doc["winner"] = 0; // Tie
+    }
+    
+    String jsonString;
+    serializeJson(doc, jsonString);
+    
+    if (xSemaphoreTake(serialMutex, portMAX_DELAY) == pdTRUE) {
+        Serial.println(jsonString);
+        xSemaphoreGive(serialMutex);
+    }
+}
+
+void sendJsonSensorReading(int sensor1Value, int sensor2Value) {
+    StaticJsonDocument<256> doc;
+    doc["type"] = "sensor_reading";
+    doc["timestamp"] = millis();
+    doc["sensor1"] = sensor1Value;
+    doc["sensor2"] = sensor2Value;
+    doc["threshold"] = sensorThreshold;
+    
+    String jsonString;
+    serializeJson(doc, jsonString);
+    
+    if (xSemaphoreTake(serialMutex, portMAX_DELAY) == pdTRUE) {
+        Serial.println(jsonString);
+        xSemaphoreGive(serialMutex);
+    }
+}
+
+void sendJsonError(const String &errorMessage) {
+    StaticJsonDocument<256> doc;
+    doc["type"] = "error";
+    doc["timestamp"] = millis();
+    doc["message"] = errorMessage;
+    
+    String jsonString;
+    serializeJson(doc, jsonString);
+    
+    if (xSemaphoreTake(serialMutex, portMAX_DELAY) == pdTRUE) {
+        Serial.println(jsonString);
+        xSemaphoreGive(serialMutex);
     }
 }
 
@@ -331,6 +593,10 @@ void doStartRace() {
     raceStarted = true;
     car1Finished = false;
     car2Finished = false;
+    
+    // Send race start event to race management system
+    sendJsonRaceStart(startTime);
+    
     delay(250);  // Increased delay to 250ms to ensure relay has time to actuate
     digitalWrite(RELAY_PIN, HIGH);  // HIGH = Relay OFF
     serialPrintln("✔ Relay deactivated");
@@ -347,18 +613,8 @@ void startRace() {
     }
 }
 
-void checkFinish() {
-    int dist1 = sensor1.readRangeContinuousMillimeters();
-    int dist2 = sensor2.readRangeContinuousMillimeters();
-
-    if (dist1 == -1) {
-        serialPrintln("❌ Error reading from Sensor 1");
-        return;
-    }
-    if (dist2 == -1) {
-        serialPrintln("❌ Error reading from Sensor 2");
-        return;
-    }
+void checkFinish(int dist1, int dist2) {
+    // Sensor readings are now passed as parameters from the racing task
 
     if (DEBUG) {
         if (xSemaphoreTake(serialMutex, portMAX_DELAY) == pdTRUE) {
@@ -373,7 +629,7 @@ void checkFinish() {
 
     // Critical section for checking race state
     if (xSemaphoreTake(raceStateMutex, portMAX_DELAY) == pdTRUE) {
-        if (dist1 < 150 && !car1Finished) {
+        if (dist1 < sensorThreshold && !car1Finished) {
             car1Time = millis() - startTime;
             car1Finished = true;
             
@@ -385,7 +641,7 @@ void checkFinish() {
             }
         }
 
-        if (dist2 < 150 && !car2Finished) {
+        if (dist2 < sensorThreshold && !car2Finished) {
             car2Time = millis() - startTime;
             car2Finished = true;
             
@@ -436,6 +692,9 @@ void declareWinner() {
         Serial.println("ms");
         xSemaphoreGive(serialMutex);
     }
+    
+    // Send race finish data to the race management system
+    sendJsonRaceFinish();
 
     serialPrintln("\n🔄 Getting ready for next race...");
     delay(2000);
@@ -444,8 +703,12 @@ void declareWinner() {
     // Reset race state safely
     if (xSemaphoreTake(raceStateMutex, portMAX_DELAY) == pdTRUE) {
         raceStarted = false;
+        currentHeatId = ""; // Clear the heat ID
         xSemaphoreGive(raceStateMutex);
     }
+    
+    // Send updated status to the race management system
+    sendJsonStatus();
     
     serialPrintln("\nPress 'L' via Serial or press the load button to load cars.");
 }

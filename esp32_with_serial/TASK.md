@@ -6,7 +6,6 @@
 - [x] Set up ESP32 development environment (Arduino IDE or PlatformIO)
 - [x] Test basic ESP32 functionality with blink sketch
 - [x] Configure necessary libraries for ESP32
-- [ ] Test WiFi connectivity for DerbyNet communication
 
 ### Sensor Setup
 - [x] Connect first GY-VL53L0XV2 sensor to ESP32
@@ -43,8 +42,16 @@
 
 ### Testing & Optimization
 - [ ] Test timing accuracy
-- [ ] Optimize sensor detection reliability
-- [ ] Debug and fix communication issues
+- [x] Optimize sensor detection reliability
+- [x] Debug and fix communication issues
+
+### Race Management System Integration
+- [x] Implement JSON-based communication protocol
+- [x] Add heat ID tracking for race identification
+- [x] Create sensor data streaming for real-time dashboard
+- [x] Implement remote race control via web interface
+- [x] Add continuous sensor monitoring for responsive UI
+- [x] Improve debug messaging to prevent protocol interference
 
 ## Code Structure Tasks
 
@@ -53,12 +60,15 @@
 - [x] Timer library for precise timing (using millis())
 - [x] User feedback (RGB LED + Buzzer)
 - [x] JSON library for DerbyNet data handling (ArduinoJson @ ^6.21.3)
+- [x] FreeRTOS for multi-core task management
 
 ### Main Program Components
 - [x] Sensor reading module (dual VL53L0X with unique addresses)
 - [x] Race control state machine (waiting, ready, racing, finished)
 - [x] Timer functionality module (millisecond precision)
 - [x] User interface module (LED states + button control)
+- [x] Multi-core task distribution (racing vs. peripheral tasks)
+- [x] Thread-safe communication between cores
 
 ## Documentation Tasks
 

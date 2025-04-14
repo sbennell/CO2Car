@@ -4,6 +4,44 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [0.7.1] - 2025-04-14
+### Added
+- **Continuous Sensor Monitoring**: Implemented always-on sensor monitoring independent of race state
+  - Improved dashboard responsiveness with 50ms update intervals
+  - Separated sensor reading from race logic for better reliability
+  - Real-time distance measurement for both lanes
+
+### Changed
+- **Racing Core Logic**: Optimized sensor reading to prevent redundant measurements
+- **Debug Output**: Limited debug messages to DEBUG mode only to improve communication reliability
+- **Function Architecture**: Modified checkFinish to use pre-read sensor values for efficiency
+
+---
+
+## [0.7.0] - 2025-04-14
+### Added
+- **Flask Race Management System Integration**: Implemented JSON-based communication protocol
+  - JSON status updates (sensor readings, race state, timing data)
+  - Command handling for race control from web interface
+  - Real-time race timing data transmission to web dashboard
+- **Enhanced Serial Communication**:
+  - Bi-directional JSON messaging protocol
+  - Heat ID tracking for race identification
+  - Error reporting and status updates
+- **Web Control Features**:
+  - Remote race start via web interface
+  - Race timer reset capability
+  - Sensor calibration support
+  - Real-time sensor monitoring
+
+### Changed
+- **Communication Protocol**: Switched from text-based to structured JSON messages
+- **Sensor Threshold**: Made distance threshold configurable via calibration commands
+- **Race Identification**: Added heat ID tracking for integration with tournament management
+- **Race Timing Data**: Enhanced format with more metadata for web dashboard integration
+
+---
+
 ## [0.6.0] - 2025-04-14
 ### Added
 - **FreeRTOS Implementation**: Restructured the entire codebase to leverage FreeRTOS for multi-core ESP32 support
