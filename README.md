@@ -1,6 +1,6 @@
 # CO₂ Car Race Timer
 
-Version 0.9.2 - 09 April 2025
+Version 0.10.0 - 14 April 2025
 
 ## Description
 
@@ -18,6 +18,7 @@ The system features a responsive web interface for remote control and monitoring
 - **Buzzer feedback**: Audible cues at race start and finish
 - **Advanced tie detection**: Real-time detection with 2ms tolerance, consistent handling across all components
 - **SD Card Storage**: Automatic race logging with detailed JSON data
+- **Race Management System Integration**: JSON-based serial communication with web-based race management system
 
 ### Web Interface Features
 - **Responsive design**: Mobile-friendly interface with touch controls

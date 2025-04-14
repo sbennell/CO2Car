@@ -1,0 +1,505 @@
+{% extends 'base.html' %}
+
+{% block title %}Hardware Management{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1>Hardware Management</h1>
+            <p class="lead">Connect and manage the ESP32 race timer hardware</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">ESP32 Connection</h5>
+                </div>
+                <div class="card-body">
+                    {% if connected %}
+                    <div class="alert alert-success">
+                        <i class="fas fa-check-circle"></i> Connected to ESP32 on port <strong>{{ port_name }}</strong>
+                    </div>
+                    <form action="{{ url_for('hardware.disconnect_hardware') }}" method="post">
+                        <button type="submit" class="btn btn-danger">
+                            <i class="fas fa-unlink"></i> Disconnect
+                        </button>
+                    </form>
+                    {% else %}
+                    <div class="alert alert-warning">
+                        <i class="fas fa-exclamation-triangle"></i> Not connected to ESP32 hardware
+                    </div>
+                    <form action="{{ url_for('hardware.connect_hardware') }}" method="post" class="mb-3">
+                        <div class="mb-3">
+                            <label for="port" class="form-label">Select Port</label>
+                            <select name="port" id="port" class="form-select">
+                                {% for port in available_ports %}
+                                <option value="{{ port.port }}">{{ port.port }} - {{ port.description }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <button type="submit" class="btn btn-success">
+                            <i class="fas fa-link"></i> Connect
+                        </button>
+                        <button type="button" id="refreshPortsBtn" class="btn btn-secondary">
+                            <i class="fas fa-sync"></i> Refresh Ports
+                        </button>
+                    </form>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-6">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Hardware Status</h5>
+                </div>
+                <div class="card-body">
+                    <div id="statusDisplay">
+                        {% if connected %}
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Connection Status:</span>
+                            <span class="badge bg-success">Connected</span>
+                        </div>
+                        <div id="hardwareStatusDetails">
+                            <p class="text-center text-muted">Loading hardware status...</p>
+                        </div>
+                        {% else %}
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Connection Status:</span>
+                            <span class="badge bg-warning">Disconnected</span>
+                        </div>
+                        <p class="text-center text-muted">Connect to ESP32 to view status</p>
+                        {% endif %}
+                    </div>
+                    {% if connected %}
+                    <button id="refreshStatusBtn" class="btn btn-primary mt-3">
+                        <i class="fas fa-sync"></i> Refresh Status
+                    </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Hardware Controls</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Calibrate Sensors</h5>
+                                    <p class="card-text">Calibrate the finish line sensors for accurate detection</p>
+                                    <button id="calibrateBtn" class="btn btn-warning" {% if not connected %}disabled{% endif %}>
+                                        <i class="fas fa-tools"></i> Calibrate
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Reset Timer</h5>
+                                    <p class="card-text">Reset the race timer to prepare for a new race</p>
+                                    <button id="resetTimerBtn" class="btn btn-danger" {% if not connected %}disabled{% endif %}>
+                                        <i class="fas fa-redo"></i> Reset Timer
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <h5 class="card-title">Test Race Start</h5>
+                                    <p class="card-text">Test the starting gate and race timing system</p>
+                                    <button id="testRaceBtn" class="btn btn-success" {% if not connected %}disabled{% endif %}>
+                                        <i class="fas fa-flag-checkered"></i> Test Race
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Sensor Readings</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Lane 1 Sensor</h5>
+                                    <div class="progress mb-3">
+                                        <div id="lane1Progress" class="progress-bar bg-primary" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <p id="lane1Reading">Distance: -- mm</p>
+                                    <p id="lane1Status">Status: Unknown</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="card">
+                                <div class="card-body">
+                                    <h5 class="card-title">Lane 2 Sensor</h5>
+                                    <div class="progress mb-3">
+                                        <div id="lane2Progress" class="progress-bar bg-primary" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
+                                    </div>
+                                    <p id="lane2Reading">Distance: -- mm</p>
+                                    <p id="lane2Status">Status: Unknown</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12">
+            <div class="card mb-4">
+                <div class="card-header bg-primary text-white">
+                    <h5 class="card-title mb-0">Communication Log</h5>
+                </div>
+                <div class="card-body">
+                    <div class="mb-3">
+                        <div class="form-check form-check-inline">
+                            <input class="form-check-input" type="checkbox" id="autoScrollCheck" checked>
+                            <label class="form-check-label" for="autoScrollCheck">Auto-scroll</label>
+                        </div>
+                        <button id="clearLogBtn" class="btn btn-sm btn-secondary float-end">
+                            <i class="fas fa-trash"></i> Clear Log
+                        </button>
+                    </div>
+                    <div id="commLog" class="border p-2 bg-light" style="height: 300px; overflow-y: auto; font-family: monospace; font-size: 0.9rem;">
+                        <div class="text-muted">Communication log will appear here...</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        // Connect to WebSocket
+        const socket = io.connect();
+        
+        // Communication log
+        const commLog = document.getElementById('commLog');
+        const autoScrollCheck = document.getElementById('autoScrollCheck');
+        const clearLogBtn = document.getElementById('clearLogBtn');
+        
+        // Add message to log
+        function addLogMessage(message, type = 'info') {
+            const timestamp = new Date().toLocaleTimeString();
+            const msgDiv = document.createElement('div');
+            msgDiv.className = `log-message log-${type}`;
+            msgDiv.innerHTML = `<span class="log-time">[${timestamp}]</span> <span class="log-content">${message}</span>`;
+            
+            commLog.appendChild(msgDiv);
+            
+            if (autoScrollCheck.checked) {
+                commLog.scrollTop = commLog.scrollHeight;
+            }
+        }
+        
+        // Clear log
+        clearLogBtn.addEventListener('click', function() {
+            commLog.innerHTML = '';
+            addLogMessage('Log cleared', 'system');
+        });
+        
+        // Refresh ports button
+        const refreshPortsBtn = document.getElementById('refreshPortsBtn');
+        if (refreshPortsBtn) {
+            refreshPortsBtn.addEventListener('click', function() {
+                fetch('/api/hardware/ports')
+                    .then(response => response.json())
+                    .then(data => {
+                        const portSelect = document.getElementById('port');
+                        portSelect.innerHTML = '';
+                        
+                        data.ports.forEach(port => {
+                            const option = document.createElement('option');
+                            option.value = port.port;
+                            option.textContent = `${port.port} - ${port.description}`;
+                            portSelect.appendChild(option);
+                        });
+                        
+                        addLogMessage('Refreshed available ports', 'system');
+                    })
+                    .catch(error => {
+                        console.error('Error fetching ports:', error);
+                        addLogMessage(`Error refreshing ports: ${error.message}`, 'error');
+                    });
+            });
+        }
+        
+        // Refresh status button
+        const refreshStatusBtn = document.getElementById('refreshStatusBtn');
+        if (refreshStatusBtn) {
+            refreshStatusBtn.addEventListener('click', function() {
+                socket.emit('request_hardware_status');
+                addLogMessage('Requested hardware status', 'system');
+            });
+        }
+        
+        // Hardware control buttons
+        const calibrateBtn = document.getElementById('calibrateBtn');
+        if (calibrateBtn) {
+            calibrateBtn.addEventListener('click', function() {
+                fetch('/api/hardware/calibrate', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    addLogMessage(`Calibration command: ${data.message}`, data.success ? 'success' : 'error');
+                })
+                .catch(error => {
+                    console.error('Error sending calibrate command:', error);
+                    addLogMessage(`Error sending calibrate command: ${error.message}`, 'error');
+                });
+            });
+        }
+        
+        const resetTimerBtn = document.getElementById('resetTimerBtn');
+        if (resetTimerBtn) {
+            resetTimerBtn.addEventListener('click', function() {
+                fetch('/api/hardware/reset_timer', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    }
+                })
+                .then(response => response.json())
+                .then(data => {
+                    addLogMessage(`Reset timer command: ${data.message}`, data.success ? 'success' : 'error');
+                })
+                .catch(error => {
+                    console.error('Error sending reset timer command:', error);
+                    addLogMessage(`Error sending reset timer command: ${error.message}`, 'error');
+                });
+            });
+        }
+        
+        const testRaceBtn = document.getElementById('testRaceBtn');
+        if (testRaceBtn) {
+            testRaceBtn.addEventListener('click', function() {
+                fetch('/api/hardware/start_race', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-Requested-With': 'XMLHttpRequest'
+                    },
+                    body: JSON.stringify({ heat_id: 0 }) // 0 indicates test race
+                })
+                .then(response => response.json())
+                .then(data => {
+                    addLogMessage(`Test race command: ${data.message}`, data.success ? 'success' : 'error');
+                })
+                .catch(error => {
+                    console.error('Error sending test race command:', error);
+                    addLogMessage(`Error sending test race command: ${error.message}`, 'error');
+                });
+            });
+        }
+        
+        // WebSocket event handlers
+        socket.on('connect', function() {
+            addLogMessage('Connected to server', 'system');
+            
+            // Request initial hardware status if connected
+            {% if connected %}
+            socket.emit('request_hardware_status');
+            {% endif %}
+        });
+        
+        socket.on('disconnect', function() {
+            addLogMessage('Disconnected from server', 'system');
+        });
+        
+        socket.on('hardware_status', function(data) {
+            const statusDetails = document.getElementById('hardwareStatusDetails');
+            if (statusDetails) {
+                if (data.connected) {
+                    let html = '<div class="table-responsive"><table class="table table-sm">';
+                    html += '<tr><th>Property</th><th>Value</th></tr>';
+                    
+                    // Add basic connection info
+                    html += `<tr><td>Port</td><td>${data.port}</td></tr>`;
+                    
+                    // Add status details if available
+                    if (data.status && Object.keys(data.status).length > 0) {
+                        const status = data.status;
+                        
+                        if (status.version) html += `<tr><td>Firmware Version</td><td>${status.version}</td></tr>`;
+                        if (status.uptime) html += `<tr><td>Uptime</td><td>${status.uptime} seconds</td></tr>`;
+                        if (status.wifi) html += `<tr><td>WiFi Status</td><td>${status.wifi.connected ? 'Connected' : 'Disconnected'}</td></tr>`;
+                        if (status.wifi && status.wifi.connected) html += `<tr><td>WiFi SSID</td><td>${status.wifi.ssid}</td></tr>`;
+                        if (status.wifi && status.wifi.connected) html += `<tr><td>WiFi Signal</td><td>${status.wifi.rssi} dBm</td></tr>`;
+                        if (status.sensors) html += `<tr><td>Sensors Status</td><td>${status.sensors.ok ? 'OK' : 'Error'}</td></tr>`;
+                        if (status.relay) html += `<tr><td>Relay Status</td><td>${status.relay.ok ? 'OK' : 'Error'}</td></tr>`;
+                        if (status.race) html += `<tr><td>Race Status</td><td>${status.race.status}</td></tr>`;
+                    }
+                    
+                    html += '</table></div>';
+                    statusDetails.innerHTML = html;
+                } else {
+                    statusDetails.innerHTML = '<p class="text-center text-muted">Not connected to ESP32</p>';
+                }
+            }
+            
+            addLogMessage('Received hardware status update', 'system');
+        });
+        
+        socket.on('hardware_connection', function(data) {
+            addLogMessage(`Hardware connection: ${data.message}`, data.success ? 'success' : 'error');
+            
+            // Reload page to reflect connection state
+            setTimeout(() => {
+                window.location.reload();
+            }, 1000);
+        });
+        
+        socket.on('esp32_status', function(data) {
+            addLogMessage('Received ESP32 status update', 'info');
+            
+            // Update hardware status display
+            socket.emit('request_hardware_status');
+        });
+        
+        socket.on('sensor_reading', function(data) {
+            // Update sensor readings
+            if (data.lane1) {
+                const lane1Reading = document.getElementById('lane1Reading');
+                const lane1Status = document.getElementById('lane1Status');
+                const lane1Progress = document.getElementById('lane1Progress');
+                
+                if (lane1Reading) lane1Reading.textContent = `Distance: ${data.lane1.distance} mm`;
+                if (lane1Status) lane1Status.textContent = `Status: ${data.lane1.detected ? 'Car Detected' : 'Clear'}`;
+                
+                if (lane1Progress) {
+                    // Calculate percentage (assuming max distance is 1000mm)
+                    const maxDistance = 1000;
+                    const percentage = Math.max(0, Math.min(100, (1 - data.lane1.distance / maxDistance) * 100));
+                    lane1Progress.style.width = `${percentage}%`;
+                    lane1Progress.setAttribute('aria-valuenow', percentage);
+                    
+                    // Change color based on detection
+                    if (data.lane1.detected) {
+                        lane1Progress.className = 'progress-bar bg-success';
+                    } else {
+                        lane1Progress.className = 'progress-bar bg-primary';
+                    }
+                }
+            }
+            
+            if (data.lane2) {
+                const lane2Reading = document.getElementById('lane2Reading');
+                const lane2Status = document.getElementById('lane2Status');
+                const lane2Progress = document.getElementById('lane2Progress');
+                
+                if (lane2Reading) lane2Reading.textContent = `Distance: ${data.lane2.distance} mm`;
+                if (lane2Status) lane2Status.textContent = `Status: ${data.lane2.detected ? 'Car Detected' : 'Clear'}`;
+                
+                if (lane2Progress) {
+                    // Calculate percentage (assuming max distance is 1000mm)
+                    const maxDistance = 1000;
+                    const percentage = Math.max(0, Math.min(100, (1 - data.lane2.distance / maxDistance) * 100));
+                    lane2Progress.style.width = `${percentage}%`;
+                    lane2Progress.setAttribute('aria-valuenow', percentage);
+                    
+                    // Change color based on detection
+                    if (data.lane2.detected) {
+                        lane2Progress.className = 'progress-bar bg-success';
+                    } else {
+                        lane2Progress.className = 'progress-bar bg-primary';
+                    }
+                }
+            }
+        });
+        
+        socket.on('race_start', function(data) {
+            addLogMessage(`Race started: Heat ID ${data.heat_id}`, 'info');
+        });
+        
+        socket.on('race_finish', function(data) {
+            addLogMessage(`Race finished: Heat ID ${data.heat_id}`, 'success');
+            
+            let resultsMsg = 'Results: ';
+            if (data.results) {
+                if (data.results.lane1) {
+                    resultsMsg += `Lane 1: ${data.results.lane1.time}ms`;
+                }
+                if (data.results.lane2) {
+                    resultsMsg += `, Lane 2: ${data.results.lane2.time}ms`;
+                }
+                if (data.results.winner) {
+                    resultsMsg += `, Winner: Lane ${data.results.winner}`;
+                }
+            }
+            
+            addLogMessage(resultsMsg, 'success');
+        });
+        
+        socket.on('esp32_error', function(data) {
+            addLogMessage(`ESP32 Error: ${data.message}`, 'error');
+        });
+        
+        // Add initial log message
+        addLogMessage('Hardware management interface loaded', 'system');
+    });
+</script>
+
+<style>
+    .log-message {
+        margin-bottom: 2px;
+        padding: 2px 5px;
+        border-left: 3px solid #ccc;
+    }
+    
+    .log-time {
+        color: #666;
+        margin-right: 8px;
+    }
+    
+    .log-system {
+        border-left-color: #6c757d;
+    }
+    
+    .log-info {
+        border-left-color: #0d6efd;
+    }
+    
+    .log-success {
+        border-left-color: #198754;
+    }
+    
+    .log-error {
+        border-left-color: #dc3545;
+    }
+</style>
+{% endblock %}

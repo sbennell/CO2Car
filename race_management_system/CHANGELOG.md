@@ -5,6 +5,26 @@ All notable changes to the CO2 Car Race Management System will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.7.0] - 2025-04-14
+
+### Added
+- Comprehensive Results Export System:
+  - Excel export functionality for race data
+  - Export buttons on relevant pages
+  - Custom formatted reports for different data types
+  - Multiple export options:
+    - Complete event results export
+    - Event standings export
+    - Round results export
+    - Heat results export
+  - Properly formatted spreadsheets with headers and styling
+  - Automatic filename generation based on export type
+
+### Changed
+- Enhanced UI with export buttons on event, standings, round, and heat pages
+- Improved data organization in exports for better readability
+- Added dedicated export routes and blueprint
+
 ## [0.6.0] - 2025-04-14
 
 ### Added
@@ -152,12 +172,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Protected routes with login_required decorator
 - CSRF protection in forms
 
+## [0.9.0] - 2025-04-15
+
+### Added
+- ESP32 Hardware Integration System:
+  - Serial communication interface for ESP32 race timer hardware
+  - JSON-based message protocol for reliable data exchange
+  - Real-time sensor monitoring with visual feedback
+  - Hardware control API for race officials
+  - WebSocket integration for live updates
+  - Comprehensive hardware management dashboard
+  - Sensor calibration and diagnostics tools
+  - Race timing system integration
+
+## [0.8.0] - 2025-04-15
+
+### Added
+- Race Countdown Timer System:
+  - WebSocket-based real-time synchronized countdown across all clients
+  - Timer controls (start, pause, reset) for race officials
+  - Customizable duration with input controls
+  - Visual progress indicator with color changes based on remaining time
+  - Status updates for all connected clients
+  - RESTful API endpoints for timer control
+  - Countdown manager utility for centralized timer management
+  - Integration with existing heat management system
+
+### Changed
+- Enhanced heat detail page with improved countdown UI
+- Added progress bar for visual countdown representation
+- Updated WebSocket implementation for better real-time synchronization
+
 ## [Unreleased]
 ### Planned
-- Race scheduling system
 - Advanced race statistics and analytics
-- User roles and permissions
-- Export race results to PDF/Excel
-- Email notifications for race events
+- Race data validation
+- Live race timing
+- Car specifications tracking
+- Data backup system
 - Mobile app integration
 - Race simulation mode for testing

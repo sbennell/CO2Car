@@ -217,19 +217,19 @@
   - [x] Heat results
   - [x] Round summaries
   - [x] Tournament progression
-- [ ] Results Export System
-  - [ ] Spreadsheet export functionality
-    - [ ] Individual race results
-    - [ ] Complete tournament data
-    - [ ] Participant statistics
-  - [ ] Multiple format support
-    - [ ] Excel (.xlsx)
+- [x] Results Export System
+  - [x] Spreadsheet export functionality
+    - [x] Individual race results
+    - [x] Complete tournament data
+    - [x] Participant statistics
+  - [x] Multiple format support
+    - [x] Excel (.xlsx)
     - [ ] CSV format
     - [ ] Google Sheets compatible
-  - [ ] Custom report templates
-    - [ ] Race summary reports
-    - [ ] Participant performance reports
-    - [ ] Tournament brackets
+  - [x] Custom report templates
+    - [x] Race summary reports
+    - [x] Participant performance reports
+    - [x] Tournament brackets
 
 ### Main Program Components
 - [x] Sensor reading module (dual VL53L0X with unique addresses)

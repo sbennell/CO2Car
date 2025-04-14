@@ -1,5 +1,5 @@
 /*
---- CO₂ Car Race Timer Version 0.9.2 ESP32 - 09 April 2025 ---
+--- CO₂ Car Race Timer Version 0.10.0 ESP32 - 14 April 2025 ---
 This system uses two VL53L0X distance sensors to time a CO₂-powered car race.
 It measures the time taken for each car to cross the sensor line and declares the winner based on the fastest time.
 
@@ -40,6 +40,8 @@ Web Interface:
 #include "TimeManager.h"
 #include "Configuration.h"
 #include "Debug.h"
+#include "SerialManager.h"
+
 
 // Function prototypes
 void setLEDState(String state);
@@ -51,11 +53,18 @@ void handleWebSocketCommand(const char* command);
 bool initSDCard();
 bool writeRaceToSD(unsigned long car1Time, unsigned long car2Time, const char* winner);
 
+// Functions for SerialManager
+void triggerRaceStart(unsigned long heatId);
+void resetRaceTimer();
+void calibrateSensors();
+void sendSensorData();
+
 // Global instances
 TimeManager timeManager;
 Configuration config;
 NetworkManager networkManager(config);
 WebServer webServer(timeManager, config, networkManager);
+SerialManager serialManager(timeManager, config);
 VL53L0X sensor1;
 VL53L0X sensor2;
 
@@ -90,7 +99,16 @@ bool startButtonPressed = false;
 bool startButtonLastState = HIGH;
 bool pauseUpdates = false;
 
-
+// Variables for SerialManager
+bool wifiConnected = false;
+String wifiSSID = "";
+int wifiRSSI = 0;
+bool sensor1Ok = false;
+bool sensor2Ok = false;
+bool relayOk = true;
+unsigned long currentHeatId = 0;
+unsigned long lastSensorUpdateTime = 0;
+const unsigned long SENSOR_UPDATE_INTERVAL = 200; // Send sensor data every 200ms
 
 void handleWebSocketCommand(const char* command) {
     if (strcmp(command, "load") == 0 && !carsLoaded) {
@@ -100,65 +118,63 @@ void handleWebSocketCommand(const char* command) {
         Serial.println("🚦 Cars loaded. Ready to start!");
     }
     else if (strcmp(command, "start") == 0 && carsLoaded && !raceStarted) {
+        setLEDState("racing");
         startRace();
     }
 }
 
 bool initSDCard() {
     if (!SD.begin(SD_CS)) {
-        Serial.println("❌ SD card initialization failed!");
+        Serial.println("❌ SD Card initialization failed!");
         return false;
     }
-    Serial.println("✅ SD card initialized.");
-    
-    // Check if race_history directory exists, create if not
-    if (!SD.exists("/race_history")) {
-        SD.mkdir("/race_history");
-        Serial.println("📁 Created race_history directory");
-    }
+    Serial.println("✅ SD Card initialized.");
     return true;
 }
 
 bool writeRaceToSD(unsigned long car1Time, unsigned long car2Time, const char* winner) {
-    // Create a JSON document for the race data
-    StaticJsonDocument<200> raceDoc;
+    // Get current date for filename
+    char filename[20];
+    time_t now = time(nullptr);
+    struct tm timeinfo;
+    gmtime_r(&now, &timeinfo);
+    sprintf(filename, "/%04d-%02d-%02d.json", timeinfo.tm_year + 1900, timeinfo.tm_mon + 1, timeinfo.tm_mday);
+    
+    // Create race data JSON
+    StaticJsonDocument<256> raceDoc;
     raceDoc["timestamp"] = timeManager.getEpochTime();
-    raceDoc["car1_time"] = car1Time / 1000.0;
-    raceDoc["car2_time"] = car2Time / 1000.0;
+    raceDoc["car1_time"] = car1Time;
+    raceDoc["car2_time"] = car2Time;
     raceDoc["winner"] = winner;
     
-    // Get current date for filename
-    struct tm timeinfo;
-    if (!getLocalTime(&timeinfo)) {
-        Serial.println("❌ Failed to get local time");
-        return false;
-    }
+    // Check if daily file exists
+    bool fileExists = SD.exists(filename);
     
-    // Create filename in format YYYY-MM-DD.json
-    char dateStr[11];
-    strftime(dateStr, sizeof(dateStr), "%Y-%m-%d", &timeinfo);
-    String filename = "/race_history/" + String(dateStr) + ".json";
-    
-    // Open or create the daily file
-    File dailyFile = SD.open(filename, FILE_READ);
+    // Create or load daily file
+    File dailyFile;
     StaticJsonDocument<4096> dailyDoc;
     
-    if (dailyFile) {
-        // File exists, read existing races
+    if (fileExists) {
+        dailyFile = SD.open(filename, FILE_READ);
+        if (!dailyFile) {
+            Serial.println("❌ Failed to open daily file for reading");
+            return false;
+        }
+        
         DeserializationError error = deserializeJson(dailyDoc, dailyFile);
         dailyFile.close();
         
         if (error) {
-            Serial.println("❌ Failed to parse existing daily file, creating new one");
-            dailyDoc.clear();
-            dailyDoc.to<JsonArray>();
+            Serial.print("❌ JSON deserialization error: ");
+            Serial.println(error.c_str());
+            return false;
         }
     } else {
-        // File doesn't exist, create new array
+        // Create a new array if file doesn't exist
         dailyDoc.to<JsonArray>();
     }
     
-    // Add new race to the array
+    // Add race to daily array
     JsonArray races = dailyDoc.as<JsonArray>();
     races.add(raceDoc);
     
@@ -176,16 +192,137 @@ bool writeRaceToSD(unsigned long car1Time, unsigned long car2Time, const char* w
     }
     
     dailyFile.close();
-    Serial.println("✅ Race data saved to SD: " + filename);
+    Serial.println("✅ Race data saved to SD: " + String(filename));
     return true;
 }
 
+// SerialManager integration functions
+void triggerRaceStart(unsigned long heatId) {
+    if (carsLoaded && !raceStarted) {
+        currentHeatId = heatId;
+        setLEDState("racing");
+        startRace();
+        
+        // Send race start event to race management system
+        serialManager.sendRaceStart(currentHeatId);
+    } else if (!carsLoaded) {
+        serialManager.sendError("Cars not loaded. Please load cars first.");
+    } else if (raceStarted) {
+        serialManager.sendError("Race already in progress.");
+    }
+}
+
+void resetRaceTimer() {
+    // Reset race state
+    raceStarted = false;
+    car1Finished = false;
+    car2Finished = false;
+    car1Time = 0;
+    car2Time = 0;
+    carsLoaded = false;
+    pauseUpdates = false;
+    
+    // Reset LED state
+    setLEDState("waiting");
+    
+    // Notify web clients
+    webServer.notifyStatus("Waiting");
+    webServer.notifyRaceComplete(0.0, 0.0);
+    
+    Serial.println("🔄 Race timer reset.");
+}
+
+void calibrateSensors() {
+    // Temporary pause race functionality
+    bool wasRacing = raceStarted;
+    if (wasRacing) {
+        raceStarted = false;
+        pauseUpdates = true;
+    }
+    
+    Serial.println("🔄 Calibrating sensors...");
+    
+    // Reset sensors
+    digitalWrite(XSHUT1, LOW);
+    digitalWrite(XSHUT2, LOW);
+    delay(10);
+    
+    // Restart sensor 1
+    digitalWrite(XSHUT1, HIGH);
+    delay(10);
+    if (sensor1.init()) {
+        sensor1.setAddress(0x30);
+        sensor1.startContinuous();
+        sensor1Ok = true;
+        Serial.println("✅ Sensor 1 calibrated.");
+    } else {
+        sensor1Ok = false;
+        Serial.println("❌ Sensor 1 calibration failed!");
+    }
+    
+    // Restart sensor 2
+    digitalWrite(XSHUT2, HIGH);
+    delay(10);
+    if (sensor2.init()) {
+        sensor2.setAddress(0x31);
+        sensor2.startContinuous();
+        sensor2Ok = true;
+        Serial.println("✅ Sensor 2 calibrated.");
+    } else {
+        sensor2Ok = false;
+        Serial.println("❌ Sensor 2 calibration failed!");
+    }
+    
+    // Notify web clients of sensor status
+    webServer.notifySensorStates(sensor1Ok, sensor2Ok);
+    
+    // Resume if we were racing
+    if (wasRacing) {
+        pauseUpdates = false;
+        raceStarted = true;
+    }
+    
+    Serial.println("✅ Calibration complete.");
+}
+
+void sendSensorData() {
+    // Only send sensor data periodically to avoid flooding the serial port
+    if (millis() - lastSensorUpdateTime > SENSOR_UPDATE_INTERVAL) {
+        lastSensorUpdateTime = millis();
+        
+        // Read sensor values
+        int lane1Distance = sensor1.readRangeContinuousMillimeters();
+        int lane2Distance = sensor2.readRangeContinuousMillimeters();
+        
+        // Check if readings are valid
+        if (lane1Distance == 65535) lane1Distance = 0;
+        if (lane2Distance == 65535) lane2Distance = 0;
+        
+        // Determine if car is detected (threshold from configuration)
+        bool lane1Detected = (lane1Distance > 0 && lane1Distance < config.getSensorThreshold());
+        bool lane2Detected = (lane2Distance > 0 && lane2Distance < config.getSensorThreshold());
+        
+        // Send sensor data to race management system
+        serialManager.sendSensorReadings(lane1Distance, lane1Detected, lane2Distance, lane2Detected);
+    }
+}
+
 void setup() {
-    Serial.begin(115200);
+    // Initialize serial communication via SerialManager
+    serialManager.begin(115200);
     Serial.println("\n=== CO₂ Car Race Timer ===");
-    Serial.printf("Version: %s (Built: %s)\n", "0.8.3", "08-04-2025");
+    Serial.printf("Version: %s (Built: %s)\n", VERSION_STRING, BUILD_DATE);
     Serial.println("=========================");
     Serial.println("Initializing system...");
+    
+    // Send initial status message during setup
+    delay(500);
+    #ifdef DEBUG
+    Serial.println("Sending initial status to Race Management System...");
+    #endif
+    serialManager.sendStatus();
+    
+    // Send a second status update after all initialization is complete
 
     // Initialize LEDC for buzzer
     ledcSetup(0, 2000, 8);  // Channel 0, 2000 Hz, 8-bit resolution
@@ -194,10 +331,23 @@ void setup() {
     // Initialize network
     networkManager.begin();
     
+    // Update WiFi status variables for SerialManager
+    wifiConnected = networkManager.isConnected();
+    wifiSSID = networkManager.getSSID();
+    wifiRSSI = networkManager.getRSSI();
+    
     // Initialize NTP if connected in station mode
     if (networkManager.isConnected() && !networkManager.isAPMode()) {
         Serial.print("🕒 Synchronizing NTP time");
         timeManager.begin();
+        
+        // Wait briefly for initial time sync
+        for (int i = 0; i < 5; i++) {
+            timeManager.update();
+            delay(100);
+            Serial.print(".");
+        }
+        Serial.println();
     }
     
     // Initialize web server (this will mount LittleFS)
@@ -243,28 +393,36 @@ void setup() {
     delay(10);
     if (sensor1.init()) {
         sensor1.setAddress(0x30);
+        sensor1Ok = true;
         Serial.println("✔ Sensor 1 initialized at 0x30.");
     } else {
+        sensor1Ok = false;
         Serial.println("❌ ERROR: Sensor 1 not detected!");
-        return;
     }
 
     digitalWrite(XSHUT2, HIGH);
     delay(10);
     if (sensor2.init()) {
         sensor2.setAddress(0x31);
+        sensor2Ok = true;
         Serial.println("✔ Sensor 2 initialized at 0x31.");
     } else {
+        sensor2Ok = false;
         Serial.println("❌ ERROR: Sensor 2 not detected!");
-        return;
     }
 
     sensor1.startContinuous();
     sensor2.startContinuous();
-    Serial.println("✔ Sensors are now active.");
 
-    Serial.println("\n✅ System Ready!");
+    Serial.println("✅ System initialization complete!");
     Serial.println("Press 'L' via Serial or press the load button to load cars.");
+    
+    // Send final status update after initialization is complete
+    delay(1000);
+    #ifdef DEBUG
+    Serial.println("Sending complete system status to Race Management System...");
+    #endif
+    serialManager.sendStatus();
 }
 
 void loop() {
@@ -272,13 +430,20 @@ void loop() {
         networkManager.update();
         timeManager.update();
     }
+    
+    // Process serial commands from race management system
+    serialManager.processCommands();
+    
+    // Send sensor data to race management system
+    sendSensorData();
+    
     static unsigned long lastSensorCheck = 0;
     
     // Update sensor status every second when not racing
     if (!pauseUpdates && millis() - lastSensorCheck > 1000) {
         lastSensorCheck = millis();
-        bool sensor1Ok = sensor1.readRangeContinuousMillimeters() != 65535;
-        bool sensor2Ok = sensor2.readRangeContinuousMillimeters() != 65535;
+        sensor1Ok = sensor1.readRangeContinuousMillimeters() != 65535;
+        sensor2Ok = sensor2.readRangeContinuousMillimeters() != 65535;
         webServer.notifySensorStates(sensor1Ok, sensor2Ok);
     }
 
@@ -341,6 +506,14 @@ void loop() {
     if (!pauseUpdates && millis() - lastNetworkCheck >= 5000) {
         lastNetworkCheck = millis();
         webServer.notifyNetworkStatus();
+        
+        // Update WiFi status variables for SerialManager
+        wifiConnected = networkManager.isConnected();
+        wifiSSID = networkManager.getSSID();
+        wifiRSSI = networkManager.getRSSI();
+        
+        // Send comprehensive status update to race management system
+        serialManager.sendStatus();
     }
 
     if (raceStarted) {
@@ -350,177 +523,157 @@ void loop() {
 
 void startRace() {
     if (!carsLoaded || raceStarted) return;
-
-    pauseUpdates = true; // Pause network and time manager updates during race timing
-    raceStarted = true;
-    Serial.println("\n🚦 Race Starting...");
-    Serial.println("📍 Firing CO₂ Relay...");
-
-    // Sound start buzzer
-    ledcWriteTone(0, 2000);
-    delay(100);
-    ledcWrite(0, 0);
     
-    // Fire the relay (active LOW)
-    digitalWrite(RELAY_PIN, LOW);
-    delay(config.getRelayActivationTime());  // Configurable activation time
-    digitalWrite(RELAY_PIN, HIGH);
-    
-    // Start the race
-    setLEDState("racing");
     raceStarted = true;
     car1Finished = false;
     car2Finished = false;
     car1Time = 0;
     car2Time = 0;
+    
+    // Play start sound
+    ledcWriteTone(0, 880);
+    delay(100);
+    ledcWriteTone(0, 1760);
+    delay(100);
+    ledcWriteTone(0, 0);
+    
+    // Activate relay to release cars
+    digitalWrite(RELAY_PIN, LOW);  // LOW = Relay ON
+    delay(250);  // Hold for 250ms
+    digitalWrite(RELAY_PIN, HIGH); // HIGH = Relay OFF
+    
+    // Record start time
     startTime = millis();
     
-    // Update web interface
-    webServer.notifyTimes(0, 0);
-    Serial.println("✔ Relay deactivated");
-
-    carsLoaded = false;
-    Serial.println("🏎 Race in progress...");
+    // Send race start notification to web clients
+    webServer.notifyStatus("Racing");
+    webServer.notifyStatus("Race Started");
+    
+    // Send race start event to race management system
+    serialManager.sendRaceStart(currentHeatId);
+    
+    Serial.println("🏁 Race started!");
+    
+    // Pause other updates during race to ensure timing accuracy
+    pauseUpdates = true;
 }
 
 void checkFinish() {
     if (!raceStarted) return;
     
-    // Read both sensors first to get readings as close together as possible
-    int dist1 = sensor1.readRangeContinuousMillimeters();
-    int dist2 = sensor2.readRangeContinuousMillimeters();
-    unsigned long currentTime = millis();
-    bool finishedThisCheck = false;
+    // Read sensor values
+    int lane1Distance = sensor1.readRangeContinuousMillimeters();
+    int lane2Distance = sensor2.readRangeContinuousMillimeters();
     
-    // Check both sensors before updating times to handle simultaneous finishes
-    bool car1CrossedLine = !car1Finished && dist1 < config.getSensorThreshold();
-    bool car2CrossedLine = !car2Finished && dist2 < config.getSensorThreshold();
+    // Check for sensor errors
+    bool lane1Error = (lane1Distance == 65535);
+    bool lane2Error = (lane2Distance == 65535);
     
-    // If both cars cross the line within the tie threshold window, consider it simultaneous
-    if (car1CrossedLine && car2CrossedLine) {
-        car1Time = currentTime - startTime;
-        car2Time = currentTime - startTime;
-        car1Finished = car2Finished = true;
-        finishedThisCheck = true;
-        
-        Serial.println("🏁 Both cars finished simultaneously!");
-        Serial.printf("🏁 Car 1 Raw Time: %lu ms\n", car1Time);
-        Serial.printf("🏁 Car 2 Raw Time: %lu ms\n", car2Time);
-    } else {
-        // Handle individual finishes
-        if (car1CrossedLine) {
-            car1Time = currentTime - startTime;
-            car1Finished = true;
-            finishedThisCheck = true;
-            Serial.printf("🏁 Car 1 Raw Time: %lu ms\n", car1Time);
-            
-            // If car 2 already finished, check for tie based on threshold
-            if (car2Finished) {
-                int timeDiff = abs((int)car1Time - (int)car2Time);
-                if (timeDiff <= (config.getTieThreshold() * 1000)) {
-                    // For ties, use the average of both times
-                    unsigned long avgTime = (car1Time + car2Time) / 2;
-                    car1Time = car2Time = avgTime;
-                    Serial.printf("⚖️ Times within %d ms threshold - Car1: %lu ms, Car2: %lu ms\n", config.getTieThreshold() * 1000, car1Time, car2Time);
-                    Serial.printf("Adjusted to tie time: %lu ms\n", avgTime);
-                }
-            }
-        }
-        
-        if (car2CrossedLine) {
-            car2Time = currentTime - startTime;
-            car2Finished = true;
-            finishedThisCheck = true;
-            Serial.printf("🏁 Car 2 Raw Time: %lu ms\n", car2Time);
-            
-            // If car 1 already finished, check for tie based on threshold
-            if (car1Finished) {
-                int timeDiff = abs((int)car1Time - (int)car2Time);
-                if (timeDiff <= (config.getTieThreshold() * 1000)) {
-                    // For ties, use the average of both times
-                    unsigned long avgTime = (car1Time + car2Time) / 2;
-                    car1Time = car2Time = avgTime;
-                    Serial.printf("⚖️ Times within %d ms threshold - Car1: %lu ms, Car2: %lu ms\n", config.getTieThreshold() * 1000, car1Time, car2Time);
-                    Serial.printf("Adjusted to tie time: %lu ms\n", avgTime);
-                }
-            }
-        }
+    // Get threshold from configuration
+    int threshold = config.getSensorThreshold();
+    
+    // Check if car 1 has finished
+    if (!car1Finished && !lane1Error && lane1Distance < threshold) {
+        car1Time = millis() - startTime;
+        car1Finished = true;
+        Serial.printf("🏎️ Car 1 finished! Time: %lu ms\n", car1Time);
+        webServer.notifyTimes(car1Time, car2Time);
     }
     
-    if (car1Finished && car2Finished) {
-        // Send final times and declare winner
-        webServer.notifyTimes(car1Time / 1000.0, car2Time / 1000.0);
+    // Check if car 2 has finished
+    if (!car2Finished && !lane2Error && lane2Distance < threshold) {
+        car2Time = millis() - startTime;
+        car2Finished = true;
+        Serial.printf("🏎️ Car 2 finished! Time: %lu ms\n", car2Time);
+        webServer.notifyTimes(car1Time, car2Time);
+    }
+    
+    // If both cars have finished or timeout (10 seconds)
+    if ((car1Finished && car2Finished) || (millis() - startTime > 10000)) {
         declareWinner();
     }
 }
 
 void declareWinner() {
+    if (!raceStarted) return;
+    
+    // Resume other updates
     pauseUpdates = false;
-    Serial.println("\n🎉 Race Finished!");
-
-    ledcWriteTone(0, 2000);
-    delay(500);
-    ledcWrite(0, 0);
-
-    // Times have already been adjusted for ties in checkFinish()
-    // Just determine the winner based on final times
-    const char* winner;
-    if (car1Time == car2Time) {
-        Serial.println("🤝 It's a tie!");
-        winner = "tie";
-    } else if (car1Time < car2Time) {
-        Serial.println("🏆 Car 1 Wins!");
-        winner = "car1";
+    
+    // Determine winner
+    const char* winner = "";
+    
+    if (car1Finished && car2Finished) {
+        // Check for tie (within 2ms)
+        if (abs((long)car1Time - (long)car2Time) <= 2) {
+            winner = "tie";
+            Serial.println("🏆 It's a tie!");
+        } else if (car1Time < car2Time) {
+            winner = "1";
+            Serial.println("🏆 Car 1 wins!");
+        } else {
+            winner = "2";
+            Serial.println("🏆 Car 2 wins!");
+        }
+    } else if (car1Finished) {
+        winner = "1";
+        Serial.println("🏆 Car 1 wins! (Car 2 did not finish)");
+    } else if (car2Finished) {
+        winner = "2";
+        Serial.println("🏆 Car 2 wins! (Car 1 did not finish)");
     } else {
-        Serial.println("🏆 Car 2 Wins!");
-        winner = "car2";
+        Serial.println("⚠ No cars finished the race!");
     }
     
-    // Save race data to SD card
-    writeRaceToSD(car1Time, car2Time, winner);
-
-    Serial.print("📊 RESULT: C1=");
-    Serial.print(car1Time);
-    Serial.print("ms, C2=");
-    Serial.print(car2Time);
-    Serial.println("ms");
-
-    // Notify race completion to save to history
+    // Play finish sound
+    ledcWriteTone(0, 1760);
+    delay(100);
+    ledcWriteTone(0, 880);
+    delay(100);
+    ledcWriteTone(0, 0);
+    
+    // Send race finish notification to web clients
+    webServer.notifyTimes(car1Time, car2Time);
     webServer.notifyRaceComplete(car1Time / 1000.0, car2Time / 1000.0);
-
-    Serial.println("\n🔄 Getting ready for next race...");
-    delay(2000);
-    setLEDState("finished");
+    
+    // Send race finish event to race management system
+    serialManager.sendRaceFinish(currentHeatId, car1Time, car2Time, winner);
+    
+    // Save race results to SD card
+    writeRaceToSD(car1Time, car2Time, winner);
+    
+    // Reset race state
     raceStarted = false;
-    Serial.println("\nPress 'L' via Serial or press the load button to load cars.");
+    setLEDState("waiting");
+    
+    // Reset current heat ID
+    currentHeatId = 0;
 }
 
 void setLEDState(String state) {
     if (state == "waiting") {
-        digitalWrite(LED_RED, HIGH);
-        digitalWrite(LED_GREEN, LOW);
-        digitalWrite(LED_BLUE, LOW);
-        webServer.notifyStatus("Waiting");
-    }
-    else if (state == "ready") {
-        digitalWrite(LED_RED, HIGH);
-        digitalWrite(LED_GREEN, HIGH);
-        digitalWrite(LED_BLUE, LOW);
-        webServer.notifyStatus("Ready");
-    }
-    else if (state == "racing") {
+        // Blue
         digitalWrite(LED_RED, LOW);
         digitalWrite(LED_GREEN, LOW);
         digitalWrite(LED_BLUE, HIGH);
-        webServer.notifyStatus("Racing");
-    }
-    else if (state == "finished") {
+    } else if (state == "ready") {
+        // Yellow
+        digitalWrite(LED_RED, HIGH);
+        digitalWrite(LED_GREEN, HIGH);
+        digitalWrite(LED_BLUE, LOW);
+    } else if (state == "racing") {
+        // Green
         digitalWrite(LED_RED, LOW);
         digitalWrite(LED_GREEN, HIGH);
         digitalWrite(LED_BLUE, LOW);
-        webServer.notifyStatus("Finished");
-    } else {
-        digitalWrite(LED_RED, LOW);
+    } else if (state == "finished") {
+        // Purple
+        digitalWrite(LED_RED, HIGH);
+        digitalWrite(LED_GREEN, LOW);
+        digitalWrite(LED_BLUE, HIGH);
+    } else if (state == "error") {
+        // Red
+        digitalWrite(LED_RED, HIGH);
         digitalWrite(LED_GREEN, LOW);
         digitalWrite(LED_BLUE, LOW);
     }

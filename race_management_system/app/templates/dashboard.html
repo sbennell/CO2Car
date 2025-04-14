@@ -79,6 +79,57 @@
         </div>
     </div>
     
+    <!-- System Setup -->
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header bg-secondary text-white">
+                    <h5 class="card-title mb-0">System Setup</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-microchip fa-3x mb-3 text-primary"></i>
+                                    <h5 class="card-title">Hardware Management</h5>
+                                    <p class="card-text">Connect and manage ESP32 race timer hardware</p>
+                                    <a href="{{ url_for('hardware.hardware_dashboard') }}" class="btn btn-primary">
+                                        <i class="fas fa-cogs"></i> Manage Hardware
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-file-export fa-3x mb-3 text-success"></i>
+                                    <h5 class="card-title">Export Results</h5>
+                                    <p class="card-text">Export race results and standings to Excel</p>
+                                    <a href="{{ url_for('export.export_dashboard') }}" class="btn btn-success">
+                                        <i class="fas fa-download"></i> Export Data
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-user-check fa-3x mb-3 text-warning"></i>
+                                    <h5 class="card-title">Check-in Management</h5>
+                                    <p class="card-text">Manage racer check-ins and deadlines</p>
+                                    <a href="{{ url_for('check_in.check_in_dashboard') }}" class="btn btn-warning">
+                                        <i class="fas fa-clipboard-check"></i> Check-in Status
+                                    </a>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
     <!-- On Deck Section -->
     <div class="row">
         <div class="col-md-12 mb-4">

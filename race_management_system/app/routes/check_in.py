@@ -7,6 +7,21 @@ import pytz
 
 check_in_bp = Blueprint('check_in', __name__)
 
+@check_in_bp.route('/check-in/dashboard')
+@login_required
+def check_in_dashboard():
+    """Display check-in dashboard with all events and their check-in status"""
+    events = Event.query.order_by(Event.date.desc()).all()
+    
+    # Get check-in status for each event
+    event_statuses = {}
+    for event in events:
+        event_statuses[event.id] = event.get_check_in_status()
+    
+    return render_template('check_in/dashboard.html', 
+                          events=events,
+                          event_statuses=event_statuses)
+
 @check_in_bp.route('/events/<int:event_id>/check-in-management')
 @login_required
 def check_in_management(event_id):

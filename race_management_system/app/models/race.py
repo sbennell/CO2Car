@@ -68,9 +68,69 @@ class Heat(db.Model):
     number = db.Column(db.Integer)
     status = db.Column(db.String(20), default='scheduled')  # scheduled, in_progress, completed, cancelled
     created_at = db.Column(db.DateTime, default=datetime.utcnow)
+    countdown_duration = db.Column(db.Integer, default=300)  # Default 5 minutes (300 seconds)
+    countdown_start_time = db.Column(db.DateTime, nullable=True)  # When the countdown was started
+    countdown_paused_at = db.Column(db.Integer, nullable=True)  # Seconds remaining when paused
     
     # Relationships
     lanes = db.relationship('Lane', backref='heat', lazy='dynamic', cascade='all, delete-orphan')
+    
+    def get_countdown_status(self):
+        """Get the current countdown status"""
+        if self.countdown_paused_at is not None:
+            # Countdown is paused
+            return {
+                'status': 'paused',
+                'remaining': self.countdown_paused_at
+            }
+        
+        if self.countdown_start_time is None:
+            # Countdown hasn't started yet
+            return {
+                'status': 'ready',
+                'remaining': self.countdown_duration
+            }
+        
+        # Countdown is running
+        elapsed = (datetime.utcnow() - self.countdown_start_time).total_seconds()
+        remaining = max(0, self.countdown_duration - int(elapsed))
+        
+        if remaining <= 0:
+            return {
+                'status': 'completed',
+                'remaining': 0
+            }
+        
+        return {
+            'status': 'running',
+            'remaining': remaining
+        }
+    
+    def start_countdown(self):
+        """Start or resume the countdown"""
+        if self.countdown_paused_at is not None:
+            # Resume from paused state
+            elapsed = self.countdown_duration - self.countdown_paused_at
+            self.countdown_start_time = datetime.utcnow() - timedelta(seconds=elapsed)
+            self.countdown_paused_at = None
+        else:
+            # Start fresh countdown
+            self.countdown_start_time = datetime.utcnow()
+            self.countdown_paused_at = None
+    
+    def pause_countdown(self):
+        """Pause the countdown"""
+        if self.countdown_start_time and self.countdown_paused_at is None:
+            # Only pause if countdown is running
+            countdown_status = self.get_countdown_status()
+            self.countdown_paused_at = countdown_status['remaining']
+    
+    def reset_countdown(self, duration=None):
+        """Reset the countdown"""
+        if duration is not None:
+            self.countdown_duration = duration
+        self.countdown_start_time = None
+        self.countdown_paused_at = None
     
     def __repr__(self):
         return f'<Heat {self.number} in Round {self.round_id}>'    

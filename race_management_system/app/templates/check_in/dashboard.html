@@ -1,0 +1,149 @@
+{% extends 'base.html' %}
+
+{% block title %}Check-in Dashboard{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row mb-4">
+        <div class="col-md-12">
+            <h1>Check-in Dashboard</h1>
+            <p class="lead">Manage racer check-ins and deadlines</p>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0">Event Check-in Status</h5>
+                </div>
+                <div class="card-body">
+                    <div class="table-responsive">
+                        <table class="table table-hover">
+                            <thead>
+                                <tr>
+                                    <th>Event</th>
+                                    <th>Date</th>
+                                    <th>Check-in Deadline</th>
+                                    <th>Status</th>
+                                    <th>Progress</th>
+                                    <th>Actions</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for event in events %}
+                                <tr>
+                                    <td>{{ event.name }}</td>
+                                    <td>{{ event.date.strftime('%Y-%m-%d') if event.date else 'Not set' }}</td>
+                                    <td>
+                                        {% if event.check_in_deadline %}
+                                            {{ event.check_in_deadline.strftime('%Y-%m-%d %H:%M') }}
+                                            {% set time_remaining = event.time_until_deadline() %}
+                                            {% if time_remaining and time_remaining.total_seconds() > 0 %}
+                                                <span class="badge bg-info">{{ time_remaining.days }}d {{ time_remaining.seconds // 3600 }}h {{ (time_remaining.seconds // 60) % 60 }}m remaining</span>
+                                            {% else %}
+                                                <span class="badge bg-danger">Deadline passed</span>
+                                            {% endif %}
+                                        {% else %}
+                                            <span class="text-muted">Not set</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% set status = event_statuses[event.id] %}
+                                        {% if status.percentage == 100 %}
+                                            <span class="badge bg-success">All checked in</span>
+                                        {% elif status.percentage >= 75 %}
+                                            <span class="badge bg-info">{{ status.percentage }}% checked in</span>
+                                        {% elif status.percentage >= 50 %}
+                                            <span class="badge bg-warning">{{ status.percentage }}% checked in</span>
+                                        {% else %}
+                                            <span class="badge bg-danger">{{ status.percentage }}% checked in</span>
+                                        {% endif %}
+                                    </td>
+                                    <td>
+                                        {% set status = event_statuses[event.id] %}
+                                        <div class="progress">
+                                            <div class="progress-bar 
+                                                {% if status.percentage == 100 %}
+                                                    bg-success
+                                                {% elif status.percentage >= 75 %}
+                                                    bg-info
+                                                {% elif status.percentage >= 50 %}
+                                                    bg-warning
+                                                {% else %}
+                                                    bg-danger
+                                                {% endif %}" 
+                                                role="progressbar" 
+                                                style="width: {{ status.percentage }}%" 
+                                                aria-valuenow="{{ status.percentage }}" 
+                                                aria-valuemin="0" 
+                                                aria-valuemax="100">
+                                                {{ status.checked_in }}/{{ status.total }}
+                                            </div>
+                                        </div>
+                                    </td>
+                                    <td>
+                                        <div class="btn-group">
+                                            <a href="{{ url_for('check_in.check_in_management', event_id=event.id) }}" class="btn btn-sm btn-outline-warning">
+                                                <i class="fas fa-cog"></i> Manage
+                                            </a>
+                                            <a href="{{ url_for('check_in.send_check_in_notifications', event_id=event.id) }}" class="btn btn-sm btn-outline-primary">
+                                                <i class="fas fa-bell"></i> Send Notifications
+                                            </a>
+                                        </div>
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row">
+        <div class="col-md-12 mb-4">
+            <div class="card">
+                <div class="card-header bg-warning text-dark">
+                    <h5 class="card-title mb-0">Check-in Features</h5>
+                </div>
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-clock fa-3x mb-3 text-warning"></i>
+                                    <h5 class="card-title">Deadline Management</h5>
+                                    <p class="card-text">Set and manage check-in deadlines for events</p>
+                                    <p class="text-muted small">Configure automatic notifications and reminders</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-users fa-3x mb-3 text-primary"></i>
+                                    <h5 class="card-title">Bulk Check-in</h5>
+                                    <p class="card-text">Check in multiple racers at once</p>
+                                    <p class="text-muted small">Efficiently manage large groups of participants</p>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-4 mb-3">
+                            <div class="card h-100">
+                                <div class="card-body text-center">
+                                    <i class="fas fa-chart-pie fa-3x mb-3 text-success"></i>
+                                    <h5 class="card-title">Status Tracking</h5>
+                                    <p class="card-text">Monitor check-in progress in real-time</p>
+                                    <p class="text-muted small">View statistics and identify missing participants</p>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+{% endblock %}

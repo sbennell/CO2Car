@@ -4,6 +4,23 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [0.10.0] - 2025-04-14
+### Added
+- **Race Management System Integration**:
+  - Implemented SerialManager class for bidirectional communication
+  - JSON-based protocol for data exchange
+  - Real-time sensor data transmission
+  - Race event reporting (start, finish, timing)
+  - Remote hardware control capabilities
+  - Comprehensive status reporting
+
+### Changed
+- Improved NTP time synchronization
+- Enhanced sensor status reporting
+- Added debug mode for development
+
+---
+
 ## [0.9.2] - 2025-04-09
 ### Added
 - **SD Card Storage**:

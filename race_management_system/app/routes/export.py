@@ -10,6 +10,16 @@ import io
 
 export_bp = Blueprint('export', __name__)
 
+@export_bp.route('/export/dashboard')
+@login_required
+def export_dashboard():
+    """Display export dashboard with all export options"""
+    events = Event.query.order_by(Event.date.desc()).all()
+    rounds = Round.query.join(Event).order_by(Event.date.desc(), Round.number).limit(10).all()
+    heats = Heat.query.join(Round).join(Event).order_by(Event.date.desc(), Round.number, Heat.number).limit(10).all()
+    
+    return render_template('export/dashboard.html', events=events, rounds=rounds, heats=heats)
+
 @export_bp.route('/export/event/<int:event_id>')
 @login_required
 def export_event_menu(event_id):

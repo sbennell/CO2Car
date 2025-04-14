@@ -38,6 +38,8 @@ def create_app():
     from app.routes.on_deck import on_deck_bp
     from app.routes.export import export_bp
     from app.routes.check_in import check_in_bp
+    from app.routes.countdown import countdown_bp
+    from app.routes.hardware import hardware_bp
     
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
@@ -45,6 +47,8 @@ def create_app():
     app.register_blueprint(on_deck_bp)
     app.register_blueprint(export_bp, url_prefix='/export')
     app.register_blueprint(check_in_bp)
+    app.register_blueprint(countdown_bp)
+    app.register_blueprint(hardware_bp)
     
     # Import models and register user loader
     from app.models.user import User
@@ -66,5 +70,9 @@ def create_app():
         scheduler_thread = threading.Thread(target=start_scheduler)
         scheduler_thread.daemon = True
         scheduler_thread.start()
+    
+    # Initialize serial manager for ESP32 communication
+    from app.utils.serial_manager import init_serial_manager
+    init_serial_manager(socketio)
     
     return app 
