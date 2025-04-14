@@ -4,6 +4,26 @@ All notable changes to this project will be documented in this file.
 
 ---
 
+## [0.6.0] - 2025-04-14
+### Added
+- **FreeRTOS Implementation**: Restructured the entire codebase to leverage FreeRTOS for multi-core ESP32 support
+  - Core 0 dedicated to racing functionality (sensor monitoring, timing)
+  - Core 1 handles everything else (serial communication, buttons, LED control)
+- **Thread Safety**: Added mutex protection for shared resources
+  - Serial port access synchronization
+  - Race state variable protection
+- **Task-Based Architecture**:
+  - Racing task for sensor readings and timing operations
+  - Peripheral task for input handling and user interface
+
+### Changed
+- **Enhanced Responsiveness**: Separated timing-critical operations from user interface code
+- **Parallel Processing**: Racing operations no longer blocked by serial or button processing
+- **Race Control Flow**: Implemented a state-based approach to race management with thread-safe transitions
+- **Modular Code Structure**: Reorganized functions for better separation of concerns
+
+---
+
 ## [0.5.0] - 2025-04-06
 ### Added
 - **ESP32 Migration**: Successfully ported the entire codebase from Arduino UNO to ESP32
