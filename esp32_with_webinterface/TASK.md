@@ -146,90 +146,82 @@
 ## Race Management System 
 
 ### Web Interface with Python Backend
-- [x] Implement Python-based web application
-  - [x] Set up Flask/FastAPI backend
-  - [x] Create RESTful API endpoints
-  - [x] Implement WebSocket support for real-time updates
-  - [x] Design database schema (SQLite/PostgreSQL)
-  - [x] Create user authentication system
-  - [x] Implement session management
-  - [x] Add user roles (admin, race official, viewer)
-  - [x] Implement database migrations with Flask-Migrate
+- [ ] Implement Python-based web application
+  - [ ] Set up Flask/FastAPI backend
+  - [ ] Create RESTful API endpoints
+  - [ ] Implement WebSocket support for real-time updates
+  - [ ] Design database schema (SQLite/PostgreSQL)
+  - [ ] Create user authentication system
+  - [ ] Implement session management
 
 ### Frontend Development
-- [x] Create responsive web interface
-  - [x] Use modern frontend framework (Bootstrap)
-  - [x] Implement real-time race status display
-  - [x] Create race control dashboard
-  - [x] Design results display interface
-  - [x] Add admin control panel
-  - [x] Implement mobile-responsive design
-  - [x] Create event management interface
-  - [x] Add event editing and archiving functionality
+- [ ] Create responsive web interface
+  - [ ] Use modern frontend framework (React/Vue.js)
+  - [ ] Implement real-time race status display
+  - [ ] Create race control dashboard
+  - [ ] Design results display interface
+  - [ ] Add admin control panel
+  - [ ] Implement mobile-responsive design
 
 ### ESP32 Communication
-- [x] Implement serial communication protocol
-  - [x] Create Python serial interface
-  - [x] Design message protocol
-  - [x] Implement error handling
-  - [x] Add reconnection logic
-  - [x] Create data synchronization system
+- [ ] Implement serial communication protocol
+  - [ ] Create Python serial interface
+  - [ ] Design message protocol
+  - [ ] Implement error handling
+  - [ ] Add reconnection logic
+  - [ ] Create data synchronization system
 
 ### Race Scheduling
-- [x] Implement race scheduling system
-  - [x] Create race schedule generator
-  - [x] Support variable number of racers
-  - [x] Calculate optimal heat assignments
-  - [x] Generate round-robin matchups
+- [ ] Implement Young and Pope "Partial Perfect-N" charts
+  - [ ] Create race schedule generator
+  - [ ] Support variable number of racers
+  - [ ] Calculate optimal heat assignments
+  - [ ] Generate round-robin matchups
 
 ### Real-time Standings
-- [x] Implement standings calculation system
-  - [x] Track points per racer
-  - [x] Calculate rankings
-  - [x] Update standings in real-time
-  - [x] Display race progression
+- [ ] Implement standings calculation system
+  - [ ] Track points per racer
+  - [ ] Calculate rankings
+  - [ ] Update standings in real-time
+  - [ ] Display race progression
 
 ### Race Operations Interface
-- [x] Create "On Deck" display system
-  - [x] Show upcoming races
-  - [x] Display next racers
-  - [x] Highlight lane assignments
-  - [x] Add preparation countdown
-  - [x] Implement color-coded lane cards
-  - [x] Add race preparation checklist
-  - [x] Create real-time timers for current and next heats
-  - [x] Add visual status indicators for lanes
+- [ ] Create "On Deck" display system
+  - [ ] Show upcoming races
+  - [ ] Display next racers
+  - [ ] Highlight lane assignments
+  - [ ] Add preparation countdown
 
 ### Check-in System
-- [x] Implement racer check-in functionality
-  - [x] Digital check-in interface
-  - [x] Real-time check-in status updates
-  - [x] "Please Check-In" display
-  - [x] Automated notifications
-  - [x] Check-in deadline management
+- [ ] Implement racer check-in functionality
+  - [ ] Digital check-in interface
+  - [ ] Real-time check-in status updates
+  - [ ] "Please Check-In" display
+  - [ ] Automated notifications
+  - [ ] Check-in deadline management
 
 ### Race Data Management
-- [x] Create participant database
-  - [x] Racer profiles
-  - [x] Race history per participant
-  - [x] Performance statistics
-- [x] Implement results tracking
-  - [x] Heat results
-  - [x] Round summaries
-  - [x] Tournament progression
-- [x] Results Export System
-  - [x] Spreadsheet export functionality
-    - [x] Individual race results
-    - [x] Complete tournament data
-    - [x] Participant statistics
-  - [x] Multiple format support
-    - [x] Excel (.xlsx)
+- [ ] Create participant database
+  - [ ] Racer profiles
+  - [ ] Race history per participant
+  - [ ] Performance statistics
+- [ ] Implement results tracking
+  - [ ] Heat results
+  - [ ] Round summaries
+  - [ ] Tournament progression
+- [ ] Results Export System
+  - [ ] Spreadsheet export functionality
+    - [ ] Individual race results
+    - [ ] Complete tournament data
+    - [ ] Participant statistics
+  - [ ] Multiple format support
+    - [ ] Excel (.xlsx)
     - [ ] CSV format
     - [ ] Google Sheets compatible
-  - [x] Custom report templates
-    - [x] Race summary reports
-    - [x] Participant performance reports
-    - [x] Tournament brackets
+  - [ ] Custom report templates
+    - [ ] Race summary reports
+    - [ ] Participant performance reports
+    - [ ] Tournament brackets
 
 ### Main Program Components
 - [x] Sensor reading module (dual VL53L0X with unique addresses)
@@ -243,13 +235,13 @@
   - [x] WiFi configuration portal
   - [x] Connection recovery
 - [x] User interface module (LED states + button control)
-- [x] Python Backend Components
-  - [x] Serial communication handler
-  - [x] WebSocket server
-  - [x] Database interface
-  - [x] API endpoints
-  - [x] Authentication system
-  - [x] Race management logic
+- [ ] Python Backend Components
+  - [ ] Serial communication handler
+  - [ ] WebSocket server
+  - [ ] Database interface
+  - [ ] API endpoints
+  - [ ] Authentication system
+  - [ ] Race management logic
 
 ## Documentation Tasks
 

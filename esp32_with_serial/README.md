@@ -1,46 +1,21 @@
 # CO₂ Car Race Timer
 
-Version 0.10.0 - 14 April 2025
-
 ## Description
 
 The **CO₂ Car Race Timer** is an automated race timer system designed for CO₂-powered cars. It uses two VL53L0X distance sensors to measure the time taken for each car to cross the finish line. The system integrates a relay to trigger the CO₂ firing mechanism and provides race results based on the fastest time. 
 
-The system features a responsive web interface for remote control and monitoring. Users can load cars and start races through either physical buttons or the web interface. Real-time race status, timing updates, and sensor health are displayed both on the physical device and the web UI. Race results are automatically saved and can be viewed in the race history table.
+The system ensures that the race cannot start until both cars are loaded, which can be triggered by a button or serial command. Once the race starts, the system tracks each car's progress and declares the winner once both cars cross the finish line.
 
 ## Features
 
-### Core Features
-- **Accurate timing**: Millisecond precision with VL53L0X sensors
-- **Tie detection**: Real-time detection with configurable threshold
-- **Physical controls**: Load and start buttons with proper debouncing
-- **LED indicators**: Visual feedback of race state (waiting, ready, racing, finished)
-- **Buzzer feedback**: Audible cues at race start and finish
-- **Advanced tie detection**: Real-time detection with 2ms tolerance, consistent handling across all components
-- **SD Card Storage**: Automatic race logging with detailed JSON data
-- **Race Management System Integration**: JSON-based serial communication with web-based race management system
-
-### Web Interface Features
-- **Responsive design**: Mobile-friendly interface with touch controls
-- **Real-time updates**: Live race status and timing information
-- **Race history**: Track and display previous race results with consistent tie handling
-- **System monitoring**: WiFi signal strength and sensor health indicators
-- **Remote control**: Load cars and start races from any device
-- **WebSocket communication**: Instant updates without page refreshes
-- **Tie handling**: Shows identical times for tied races
-- **Dual Network Mode**:
-  - **Station Mode**: Connects to existing WiFi network with robust reconnection
-  - **AP Mode**: Creates its own network (SSID: CO2RaceTimer-XXXX, Password: co2racer) when WiFi unavailable
-  - **Auto-switching**: Falls back to AP mode if WiFi connection fails
-  - **Async Events**: Non-blocking WiFi handling for improved stability
-
-#### Web Interface Screenshots
-
-##### Main Race Interface
-![Main Race Interface](images/Web-Interface-home.png)
-
-##### Configuration Interface
-![Configuration Interface](images/Web-Interface-Config.png)
+- **Two VL53L0X distance sensors**: Tracks the cars as they pass through the sensor line.
+- **Relay control**: Fires the CO₂ mechanism to start the race.
+- **Load detection**: Requires cars to be loaded before the race can start, using a button or serial command.
+- **Race result output**: Displays the time taken for each car to complete the race and declares a winner.
+- **Button press handling**: Supports momentary switches for load and start buttons, with proper edge detection.
+- **Debug logging**: Optionally outputs sensor distance readings for troubleshooting.
+- **LED indicators**: Visual feedback of race state (waiting, ready, racing, finished).
+- **Buzzer feedback**: Audible cues at race start and finish.
 
 ## Hardware Requirements
 
@@ -51,7 +26,6 @@ The system features a responsive web interface for remote control and monitoring
 - **ESP32**: Manages communication between the sensors, relay, buttons, and the system logic.
 - **Tri-color LED**: Visual indication of system state.
 - **Buzzer**: Provides audible feedback for race events.
-- **SD Card Module**: Stores race history and configuration data.
 
 ## Pinout
 
@@ -62,33 +36,22 @@ The system features a responsive web interface for remote control and monitoring
 | GPIO16    | Sensor 1 XSHUT       | VL53L0X address: 0x30   |
 | GPIO17    | Sensor 2 XSHUT       | VL53L0X address: 0x31   |
 | GPIO4     | Load Button (INPUT)  | With internal pullup    |
-| GPIO13    | Start Button (INPUT) | With internal pullup    |
+| GPIO5     | Start Button (INPUT) | With internal pullup    |
 | GPIO14    | Relay (OUTPUT)       | Active LOW              |
-| GPIO33    | Buzzer (OUTPUT)      | Active HIGH             |
+| GPIO27    | Buzzer (OUTPUT)      | Active HIGH             |
 | GPIO25    | LED Red (OUTPUT)     | Active HIGH             |
 | GPIO26    | LED Green (OUTPUT)   | Active HIGH             |
-| GPIO27    | LED Blue (OUTPUT)    | Active HIGH             |
-| GPIO18    | SD Card SCK          | SPI Clock               |
-| GPIO19    | SD Card MISO         | SPI MISO                |
-| GPIO23    | SD Card MOSI         | SPI MOSI                |
-| GPIO5     | SD Card CS           | SPI Chip Select         |
+| GPIO33    | LED Blue (OUTPUT)    | Active HIGH             |
 
 ## Installation
 
 ### 1. Hardware Setup
 
-- **VL53L0X Sensors**: Connect both sensors to ESP32 via I2C (GPIO21/SDA and GPIO22/SCL). Use `XSHUT` pins (GPIO16 and GPIO17) to reset each sensor individually.
-- **Relay Module**: Connect the relay to GPIO14 to trigger the CO₂ mechanism.
-- **Buttons**: Connect the load button to GPIO4 and the start button to GPIO13.
-- **LED**: Connect the tri-color LED to GPIO25 (Red), GPIO26 (Green), and GPIO27 (Blue).
-- **Buzzer**: Connect the buzzer to GPIO33.
-- **SD Card Module**: Connect to ESP32 via SPI:
-  - SCK: GPIO18
-  - MISO: GPIO19
-  - MOSI: GPIO23
-  - CS: GPIO5
-  - VCC: 3.3V (do not use 5V)
-  - GND: Any GND pin
+- **VL53L0X Sensors**: Connect both sensors to the Arduino Uno via I2C (A4/SDA and A5/SCL pins). Use `XSHUT` pins (Digital 2 and Digital 3) to reset each sensor individually.
+- **Relay Module**: Connect the relay to Digital 8 on the Arduino Uno to trigger the CO₂ mechanism.
+- **Buttons**: Connect the load button to Digital 4 and the start button to Digital 5.
+- **LED**: Connect the tri-color LED to pins 10 (Red), 11 (Green), and 12 (Blue).
+- **Buzzer**: Connect the buzzer to Digital 9.
 
 ### 2. Software Setup
 
@@ -96,32 +59,7 @@ The system features a responsive web interface for remote control and monitoring
    - Install [VS Code](https://code.visualstudio.com/)
    - Install the PlatformIO extension
 
-2. **Required Libraries**:
-   - VL53L0X by Pololu
-   - ESPAsyncWebServer by me-no-dev
-   - AsyncTCP by me-no-dev
-   - ArduinoJson by Benoit Blanchon
-   - SD (built-in)
-   - SPI (built-in)
-
-3. **Network Setup**:
-   - **First Boot**:
-     - Device starts in AP mode for initial setup
-     - SSID: `CO2RaceTimer-XXXX` (XXXX = last 4 digits of MAC)
-     - Password: `co2racer`
-     - IP Address: 192.168.4.1
-   - **WiFi Configuration**:
-     - Connect to the AP and navigate to 192.168.4.1
-     - Use the configuration page to set up WiFi credentials
-     - Device will automatically connect to configured network
-   - **AP Mode Fallback**:
-     - If WiFi connection fails, device reverts to AP mode
-     - Clear settings through web interface to reconfigure
-
-4. **Web Interface Setup**:
-   - Connect to either your WiFi network or the device's AP
-   - Navigate to the device's IP address in a web browser
-   - Use the web interface to control and monitor races
+2. **Required Libraries**: The following libraries are automatically managed by PlatformIO:
    ```ini
    lib_deps =
      pololu/VL53L0X @ ^1.3.1
@@ -190,17 +128,8 @@ After the race, the system will reset and wait for the next race. To reset:
 
 ## Configuration
 
-### Debug Settings
 - **DEBUG Mode**: Set the `#define DEBUG` flag to true in the code to enable detailed debug logging of sensor readings.
 - **Debounce Delay**: The `DEBOUNCE_DELAY` constant (default: 50ms) can be adjusted to fine-tune button responsiveness.
-
-### Race Timing Settings
-- **Tie Threshold**: Configurable threshold (default: 2ms) for detecting ties. Times within this threshold are averaged and considered a tie.
-- **Real-time Detection**: Ties are detected and handled in real-time as cars finish, ensuring consistent timing across all components.
-- **Optimized Timing**: Network and time manager updates are paused during races for maximum timing accuracy:
-  - Live race display
-  - Final results
-  - Race history storage
 
 ## License
 
