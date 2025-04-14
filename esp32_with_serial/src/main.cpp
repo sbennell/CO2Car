@@ -37,11 +37,11 @@ VL53L0X sensor2;
 
 // Pin Definitions
 #define LOAD_BUTTON_PIN 4
-#define START_BUTTON_PIN 5
+#define START_BUTTON_PIN 13
 #define XSHUT1 16
 #define XSHUT2 17
 #define RELAY_PIN 14  // Changed back to GPIO14 per pin assignments
-#define BUZZER_PIN 27
+#define BUZZER_PIN 33
 
 // RGB LED Pins
 const int LED_RED = 25;
