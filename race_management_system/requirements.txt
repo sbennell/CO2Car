@@ -5,7 +5,7 @@ Flask-Login==0.6.3
 SQLAlchemy>=2.0.40
 pyserial==3.5
 python-dotenv==1.0.0
-Werkzeug>=3.0.0
+Werkzeug==2.3.7
 python-engineio==4.8.0
 python-socketio==5.10.0
 gunicorn==21.2.0
@@ -13,3 +13,7 @@ pytz==2023.3
 openpyxl==3.1.2
 XlsxWriter==3.1.2
 schedule==1.2.1
+Flask-Migrate==4.0.5
+alembic==1.12.0
+Jinja2==3.1.2
+simple-websocket>=0.10.0

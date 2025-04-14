@@ -4,7 +4,64 @@ All notable changes to the CO2 Car Race Management System will be documented in 
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
+## [0.10.0] - 2025-04-15
 
+### Added
+- Enhanced Hardware Dashboard:
+  - Robust WebSocket connection handling with automatic reconnection
+  - Comprehensive error handling and logging system
+  - Real-time sensor data visualization with progress bars
+  - Status indicators for connection and sensor states
+  - Communication log with auto-scroll and filtering
+  - Hardware control panel with calibration and test tools
+  - Dual lane sensor monitoring with independent status tracking
+  - Visual feedback for sensor readings and detection states
+  - Timer reset and test race functionality
+  - Port management with dynamic refresh capability
+
+### Changed
+- Improved WebSocket implementation with better error recovery
+- Enhanced sensor data display with visual progress indicators
+- Updated hardware status display with more detailed information
+- Reorganized hardware controls for better usability
+- Improved error messaging and logging format
+
+### Fixed
+- Resolved WebSocket connection stability issues
+- Fixed sensor reading display updates
+- Corrected status indicator synchronization
+- Addressed hardware control button state management
+
+## [0.9.0] - 2025-04-15
+
+### Added
+- ESP32 Hardware Integration System:
+  - Serial communication interface for ESP32 race timer hardware
+  - JSON-based message protocol for reliable data exchange
+  - Real-time sensor monitoring with visual feedback
+  - Hardware control API for race officials
+  - WebSocket integration for live updates
+  - Comprehensive hardware management dashboard
+  - Sensor calibration and diagnostics tools
+  - Race timing system integration
+
+## [0.8.0] - 2025-04-15
+
+### Added
+- Race Countdown Timer System:
+  - WebSocket-based real-time synchronized countdown across all clients
+  - Timer controls (start, pause, reset) for race officials
+  - Customizable duration with input controls
+  - Visual progress indicator with color changes based on remaining time
+  - Status updates for all connected clients
+  - RESTful API endpoints for timer control
+  - Countdown manager utility for centralized timer management
+  - Integration with existing heat management system
+
+### Changed
+- Enhanced heat detail page with improved countdown UI
+- Added progress bar for visual countdown representation
+- Updated WebSocket implementation for better real-time synchronization
 ## [0.7.0] - 2025-04-14
 
 ### Added
@@ -172,36 +229,9 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 - Protected routes with login_required decorator
 - CSRF protection in forms
 
-## [0.9.0] - 2025-04-15
 
-### Added
-- ESP32 Hardware Integration System:
-  - Serial communication interface for ESP32 race timer hardware
-  - JSON-based message protocol for reliable data exchange
-  - Real-time sensor monitoring with visual feedback
-  - Hardware control API for race officials
-  - WebSocket integration for live updates
-  - Comprehensive hardware management dashboard
-  - Sensor calibration and diagnostics tools
-  - Race timing system integration
 
-## [0.8.0] - 2025-04-15
 
-### Added
-- Race Countdown Timer System:
-  - WebSocket-based real-time synchronized countdown across all clients
-  - Timer controls (start, pause, reset) for race officials
-  - Customizable duration with input controls
-  - Visual progress indicator with color changes based on remaining time
-  - Status updates for all connected clients
-  - RESTful API endpoints for timer control
-  - Countdown manager utility for centralized timer management
-  - Integration with existing heat management system
-
-### Changed
-- Enhanced heat detail page with improved countdown UI
-- Added progress bar for visual countdown representation
-- Updated WebSocket implementation for better real-time synchronization
 
 ## [Unreleased]
 ### Planned

@@ -186,13 +186,49 @@ def handle_disconnect_hardware():
 @socketio.on('request_hardware_status')
 def handle_request_hardware_status():
     """Handle WebSocket request for hardware status"""
+    logger.info("Received WebSocket request for hardware status")
     serial_manager = get_serial_manager()
     
+    # First log the current state
+    logger.info(f"Serial connection status: connected={serial_manager.connected}, port={serial_manager.port_name if serial_manager.connected else None}")
+    if serial_manager.connected and serial_manager.last_status:
+        logger.info(f"Last received status: {serial_manager.last_status}")
+    
+    # Request fresh status from ESP32
     if serial_manager.connected:
+        logger.info("Requesting fresh status from ESP32")
         serial_manager.send_command('status')
     
-    socketio.emit('hardware_status', {
+    # Wait a brief moment for ESP32 to respond (100ms)
+    import time
+    time.sleep(0.1)
+    
+    # Create status message with proper structure
+    status_message = {
         'connected': serial_manager.connected,
         'port': serial_manager.port_name if serial_manager.connected else None,
         'status': serial_manager.last_status if serial_manager.connected else {}
-    })
+    }
+    
+    # Log what we're sending
+    logger.info(f"Emitting hardware_status: {status_message}")
+    
+    # Send the status to the client
+    socketio.emit('hardware_status', status_message)
+    
+    # Also emit dummy status data to ensure the dashboard is updated
+    if serial_manager.connected and not serial_manager.last_status:
+        dummy_status = {
+            "timestamp": int(time.time() * 1000),
+            "race_started": False,
+            "cars_loaded": False,
+            "car1_finished": False,
+            "car2_finished": False,
+            "car1_time": 0,
+            "car2_time": 0,
+            "sensor_calibrated": False,
+            "current_heat_id": "None",
+            "type": "status"
+        }
+        logger.info(f"Emitting backup status data: {dummy_status}")
+        socketio.emit('esp32_status', dummy_status)

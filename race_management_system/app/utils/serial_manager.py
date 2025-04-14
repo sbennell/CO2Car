@@ -28,6 +28,10 @@ class SerialManager:
         self.last_status = {}
         self.available_ports = []
         
+        # Initialize logger
+        self.logger = logging.getLogger(__name__)
+        self.logger.setLevel(logging.INFO)
+
     def get_available_ports(self):
         """Get a list of available serial ports"""
         self.available_ports = [
@@ -55,13 +59,18 @@ class SerialManager:
                         break
             
             if port is None:
-                logger.error("No ESP32 device found")
+                self.logger.error("No ESP32 device found")
+                if self.socketio:
+                    self.socketio.emit('esp32_error', {
+                        'type': 'error',
+                        'message': 'No ESP32 device found'
+                    })
                 return False
             
             self.serial_port = serial.Serial(port, self.baudrate, timeout=self.timeout)
             self.port_name = port
             self.connected = True
-            logger.info(f"Connected to ESP32 on port {port}")
+            self.logger.info(f"Connected to ESP32 on port {port}")
             
             # Start the read thread
             self.running = True
@@ -72,10 +81,23 @@ class SerialManager:
             # Send initial status request
             self.send_command("status")
             
+            # Emit connection success
+            if self.socketio:
+                self.socketio.emit('hardware_status', {
+                    'connected': True,
+                    'port': self.port_name,
+                    'status': self.last_status
+                })
+            
             return True
         
         except Exception as e:
-            logger.error(f"Error connecting to serial port: {e}")
+            self.logger.error(f"Error connecting to serial port: {e}")
+            if self.socketio:
+                self.socketio.emit('esp32_error', {
+                    'type': 'error',
+                    'message': f'Error connecting to serial port: {e}'
+                })
             self.connected = False
             return False
     
@@ -139,50 +161,80 @@ class SerialManager:
     
     def _process_serial_data(self, data):
         """Process data received from the ESP32"""
-        logger.info(f"Received data: {data}")
+        self.logger.info(f"Received data: {data}")
         
         try:
             # Parse JSON data
             json_data = json.loads(data)
+            self.logger.info(f"Parsed JSON: {json_data}")
             
-            # Handle different message types
+            # Force-add the port name to all messages for the frontend
+            json_data['port'] = self.port_name
+            
+            # Always maintain last status for hardware status requests
+            if "type" in json_data and json_data["type"] == "status":
+                self.last_status = json_data
+                
+                # Create hardware status message
+                hardware_status = {
+                    'connected': True,
+                    'port': self.port_name,
+                    'status': json_data
+                }
+                
+                # Emit hardware status update
+                if self.socketio:
+                    self.logger.info(f"Emitting hardware_status: {hardware_status}")
+                    self.socketio.emit('hardware_status', hardware_status)
+            
+            # Handle specific message types
             if "type" in json_data:
                 msg_type = json_data["type"]
                 
-                if msg_type == "status":
-                    # ESP32 status update
-                    self.last_status = json_data
+                # 1. Sensor readings
+                if msg_type == "sensor_reading":
                     if self.socketio:
-                        self.socketio.emit('esp32_status', json_data)
+                        self.logger.info(f"Emitting sensor reading: {json_data}")
+                        self.socketio.emit('sensor_reading', json_data)
                 
+                # 2. Race events
                 elif msg_type == "race_start":
-                    # Race has started
                     if self.socketio:
+                        self.logger.info(f"Emitting race start: {json_data}")
                         self.socketio.emit('race_start', json_data)
                 
                 elif msg_type == "race_finish":
-                    # Race has finished with timing data
                     if self.socketio:
+                        self.logger.info(f"Emitting race finish: {json_data}")
                         self.socketio.emit('race_finish', json_data)
-                        
-                        # Also update the race results in the database
-                        self._update_race_results(json_data)
                 
-                elif msg_type == "sensor_reading":
-                    # Sensor data update
-                    if self.socketio:
-                        self.socketio.emit('sensor_reading', json_data)
-                
+                # 3. Error messages
                 elif msg_type == "error":
-                    # Error message from ESP32
-                    logger.error(f"ESP32 error: {json_data.get('message', 'Unknown error')}")
                     if self.socketio:
+                        self.logger.error(f"ESP32 error: {json_data.get('message', 'Unknown error')}")
                         self.socketio.emit('esp32_error', json_data)
             
-        except json.JSONDecodeError:
-            logger.warning(f"Received non-JSON data: {data}")
+            # Fallback for legacy messages
+            elif all(key in json_data for key in ['sensor1', 'sensor2']):
+                if self.socketio:
+                    self.logger.info(f"Emitting legacy sensor reading: {json_data}")
+                    self.socketio.emit('sensor_reading', json_data)
+        
+        except json.JSONDecodeError as e:
+            self.logger.error(f"Error parsing JSON data: {e}")
+            if self.socketio:
+                self.socketio.emit('esp32_error', {
+                    'type': 'error',
+                    'message': f'Invalid JSON data received: {e}'
+                })
+        
         except Exception as e:
-            logger.error(f"Error processing serial data: {e}")
+            self.logger.error(f"Error processing serial data: {e}")
+            if self.socketio:
+                self.socketio.emit('esp32_error', {
+                    'type': 'error',
+                    'message': f'Error processing data: {e}'
+                })
     
     def _update_race_results(self, race_data):
         """Update race results in the database"""
@@ -200,8 +252,17 @@ class SerialManager:
     
     def get_status(self):
         """Get the current status of the ESP32"""
+        if not self.connected:
+            return {'connected': False}
+            
+        # Request a fresh status
         self.send_command("status")
-        return self.last_status
+        
+        # Format the response correctly for the dashboard
+        if self.last_status:
+            return {'connected': True, 'port': self.port_name, 'status': self.last_status}
+        else:
+            return {'connected': True, 'port': self.port_name}
     
     def calibrate_sensors(self):
         """Calibrate the sensors on the ESP32"""

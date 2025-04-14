@@ -65,7 +65,22 @@
                             <span class="badge bg-success">Connected</span>
                         </div>
                         <div id="hardwareStatusDetails">
-                            <p class="text-center text-muted">Loading hardware status...</p>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Sensors:</span>
+                                <span class="badge ${data.sensors_calibrated ? 'bg-success' : 'bg-warning'}">
+                                    ${data.sensors_calibrated ? 'Calibrated' : 'Needs Calibration'}
+                                </span>
+                            </div>
+                            <div class="d-flex justify-content-between mb-2">
+                                <span>Race State:</span>
+                                <span class="badge bg-info">${data.race_state || 'Unknown'}</span>
+                            </div>
+                            ${data.sensor_readings ? `
+                            <div class="mt-3">
+                                <h6>Sensor Readings:</h6>
+                                <pre class="bg-light p-2 rounded">${JSON.stringify(data.sensor_readings, null, 2)}</pre>
+                            </div>
+                            ` : ''}
                         </div>
                         {% else %}
                         <div class="d-flex justify-content-between mb-2">
@@ -148,7 +163,7 @@
                                         <div id="lane1Progress" class="progress-bar bg-primary" role="progressbar" style="width: 0%" aria-valuenow="0" aria-valuemin="0" aria-valuemax="100"></div>
                                     </div>
                                     <p id="lane1Reading">Distance: -- mm</p>
-                                    <p id="lane1Status">Status: Unknown</p>
+                                    <p id="lane1Status">Status: <span id="lane1StatusBadge" class="badge bg-secondary">Unknown</span></p>
                                 </div>
                             </div>
                         </div>
@@ -197,17 +212,43 @@
 {% endblock %}
 
 {% block scripts %}
+<!-- Add template variables in a script with type=application/json to avoid JavaScript linting issues -->
+<script type="application/json" id="template-data">
+    {
+        "connected": {% if connected %}true{% else %}false{% endif %}
+    }
+</script>
+
 <script>
     document.addEventListener('DOMContentLoaded', function() {
-        // Connect to WebSocket
-        const socket = io.connect();
+        // Get template variables
+        const templateData = JSON.parse(document.getElementById('template-data').textContent);
+        
+        console.log('DOM loaded, attempting to connect to WebSocket...');
+        
+        // Configure Socket.IO connection
+        const socket = io({
+            path: '/socket.io',
+            transports: ['websocket', 'polling'],
+            upgrade: true,
+            reconnection: true,
+            reconnectionAttempts: Infinity,
+            reconnectionDelay: 1000,
+            reconnectionDelayMax: 5000,
+            timeout: 20000,
+            forceNew: true,
+            autoConnect: true
+        });
+
+        // Debug socket state
+        console.log('Socket.IO instance created:', socket);
         
         // Communication log
         const commLog = document.getElementById('commLog');
         const autoScrollCheck = document.getElementById('autoScrollCheck');
         const clearLogBtn = document.getElementById('clearLogBtn');
         
-        // Add message to log
+        // Add message to log with console output
         function addLogMessage(message, type = 'info') {
             const timestamp = new Date().toLocaleTimeString();
             const msgDiv = document.createElement('div');
@@ -215,262 +256,244 @@
             msgDiv.innerHTML = `<span class="log-time">[${timestamp}]</span> <span class="log-content">${message}</span>`;
             
             commLog.appendChild(msgDiv);
+            console.log(`[${type}] ${message}`);
             
             if (autoScrollCheck.checked) {
                 commLog.scrollTop = commLog.scrollHeight;
             }
         }
-        
-        // Clear log
-        clearLogBtn.addEventListener('click', function() {
-            commLog.innerHTML = '';
-            addLogMessage('Log cleared', 'system');
-        });
-        
-        // Refresh ports button
-        const refreshPortsBtn = document.getElementById('refreshPortsBtn');
-        if (refreshPortsBtn) {
-            refreshPortsBtn.addEventListener('click', function() {
-                fetch('/api/hardware/ports')
-                    .then(response => response.json())
-                    .then(data => {
-                        const portSelect = document.getElementById('port');
-                        portSelect.innerHTML = '';
-                        
-                        data.ports.forEach(port => {
-                            const option = document.createElement('option');
-                            option.value = port.port;
-                            option.textContent = `${port.port} - ${port.description}`;
-                            portSelect.appendChild(option);
-                        });
-                        
-                        addLogMessage('Refreshed available ports', 'system');
-                    })
-                    .catch(error => {
-                        console.error('Error fetching ports:', error);
-                        addLogMessage(`Error refreshing ports: ${error.message}`, 'error');
-                    });
-            });
-        }
-        
-        // Refresh status button
-        const refreshStatusBtn = document.getElementById('refreshStatusBtn');
-        if (refreshStatusBtn) {
-            refreshStatusBtn.addEventListener('click', function() {
+
+        // WebSocket connection handling
+        socket.on('connect', () => {
+            console.log('WebSocket connected with ID:', socket.id);
+            addLogMessage(`WebSocket connected (ID: ${socket.id})`, 'success');
+            
+            if (templateData.connected) {
+                console.log('Requesting initial hardware status...');
                 socket.emit('request_hardware_status');
-                addLogMessage('Requested hardware status', 'system');
-            });
-        }
-        
-        // Hardware control buttons
-        const calibrateBtn = document.getElementById('calibrateBtn');
-        if (calibrateBtn) {
-            calibrateBtn.addEventListener('click', function() {
-                fetch('/api/hardware/calibrate', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    addLogMessage(`Calibration command: ${data.message}`, data.success ? 'success' : 'error');
-                })
-                .catch(error => {
-                    console.error('Error sending calibrate command:', error);
-                    addLogMessage(`Error sending calibrate command: ${error.message}`, 'error');
-                });
-            });
-        }
-        
-        const resetTimerBtn = document.getElementById('resetTimerBtn');
-        if (resetTimerBtn) {
-            resetTimerBtn.addEventListener('click', function() {
-                fetch('/api/hardware/reset_timer', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    }
-                })
-                .then(response => response.json())
-                .then(data => {
-                    addLogMessage(`Reset timer command: ${data.message}`, data.success ? 'success' : 'error');
-                })
-                .catch(error => {
-                    console.error('Error sending reset timer command:', error);
-                    addLogMessage(`Error sending reset timer command: ${error.message}`, 'error');
-                });
-            });
-        }
-        
-        const testRaceBtn = document.getElementById('testRaceBtn');
-        if (testRaceBtn) {
-            testRaceBtn.addEventListener('click', function() {
-                fetch('/api/hardware/start_race', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                        'X-Requested-With': 'XMLHttpRequest'
-                    },
-                    body: JSON.stringify({ heat_id: 0 }) // 0 indicates test race
-                })
-                .then(response => response.json())
-                .then(data => {
-                    addLogMessage(`Test race command: ${data.message}`, data.success ? 'success' : 'error');
-                })
-                .catch(error => {
-                    console.error('Error sending test race command:', error);
-                    addLogMessage(`Error sending test race command: ${error.message}`, 'error');
-                });
-            });
-        }
-        
-        // WebSocket event handlers
-        socket.on('connect', function() {
-            addLogMessage('Connected to server', 'system');
-            
-            // Request initial hardware status if connected
-            {% if connected %}
-            socket.emit('request_hardware_status');
-            {% endif %}
-        });
-        
-        socket.on('disconnect', function() {
-            addLogMessage('Disconnected from server', 'system');
-        });
-        
-        socket.on('hardware_status', function(data) {
-            const statusDetails = document.getElementById('hardwareStatusDetails');
-            if (statusDetails) {
-                if (data.connected) {
-                    let html = '<div class="table-responsive"><table class="table table-sm">';
-                    html += '<tr><th>Property</th><th>Value</th></tr>';
-                    
-                    // Add basic connection info
-                    html += `<tr><td>Port</td><td>${data.port}</td></tr>`;
-                    
-                    // Add status details if available
-                    if (data.status && Object.keys(data.status).length > 0) {
-                        const status = data.status;
-                        
-                        if (status.version) html += `<tr><td>Firmware Version</td><td>${status.version}</td></tr>`;
-                        if (status.uptime) html += `<tr><td>Uptime</td><td>${status.uptime} seconds</td></tr>`;
-                        if (status.wifi) html += `<tr><td>WiFi Status</td><td>${status.wifi.connected ? 'Connected' : 'Disconnected'}</td></tr>`;
-                        if (status.wifi && status.wifi.connected) html += `<tr><td>WiFi SSID</td><td>${status.wifi.ssid}</td></tr>`;
-                        if (status.wifi && status.wifi.connected) html += `<tr><td>WiFi Signal</td><td>${status.wifi.rssi} dBm</td></tr>`;
-                        if (status.sensors) html += `<tr><td>Sensors Status</td><td>${status.sensors.ok ? 'OK' : 'Error'}</td></tr>`;
-                        if (status.relay) html += `<tr><td>Relay Status</td><td>${status.relay.ok ? 'OK' : 'Error'}</td></tr>`;
-                        if (status.race) html += `<tr><td>Race Status</td><td>${status.race.status}</td></tr>`;
-                    }
-                    
-                    html += '</table></div>';
-                    statusDetails.innerHTML = html;
-                } else {
-                    statusDetails.innerHTML = '<p class="text-center text-muted">Not connected to ESP32</p>';
-                }
+                addLogMessage('Requesting initial hardware status...', 'info');
             }
-            
-            addLogMessage('Received hardware status update', 'system');
         });
-        
-        socket.on('hardware_connection', function(data) {
-            addLogMessage(`Hardware connection: ${data.message}`, data.success ? 'success' : 'error');
+
+        socket.on('connect_error', (error) => {
+            console.error('WebSocket connection error:', error);
+            addLogMessage(`WebSocket connection error: ${error.message}`, 'error');
             
-            // Reload page to reflect connection state
+            // Try to reconnect after a delay
             setTimeout(() => {
-                window.location.reload();
-            }, 1000);
+                console.log('Attempting to reconnect...');
+                socket.connect();
+            }, 2000);
         });
-        
-        socket.on('esp32_status', function(data) {
-            addLogMessage('Received ESP32 status update', 'info');
+
+        socket.on('disconnect', (reason) => {
+            console.log('WebSocket disconnected:', reason);
+            addLogMessage(`WebSocket disconnected: ${reason}`, 'error');
             
-            // Update hardware status display
-            socket.emit('request_hardware_status');
-        });
-        
-        socket.on('sensor_reading', function(data) {
-            // Update sensor readings
-            if (data.lane1) {
-                const lane1Reading = document.getElementById('lane1Reading');
-                const lane1Status = document.getElementById('lane1Status');
-                const lane1Progress = document.getElementById('lane1Progress');
-                
-                if (lane1Reading) lane1Reading.textContent = `Distance: ${data.lane1.distance} mm`;
-                if (lane1Status) lane1Status.textContent = `Status: ${data.lane1.detected ? 'Car Detected' : 'Clear'}`;
-                
-                if (lane1Progress) {
-                    // Calculate percentage (assuming max distance is 1000mm)
-                    const maxDistance = 1000;
-                    const percentage = Math.max(0, Math.min(100, (1 - data.lane1.distance / maxDistance) * 100));
-                    lane1Progress.style.width = `${percentage}%`;
-                    lane1Progress.setAttribute('aria-valuenow', percentage);
-                    
-                    // Change color based on detection
-                    if (data.lane1.detected) {
-                        lane1Progress.className = 'progress-bar bg-success';
-                    } else {
-                        lane1Progress.className = 'progress-bar bg-primary';
-                    }
-                }
-            }
-            
-            if (data.lane2) {
-                const lane2Reading = document.getElementById('lane2Reading');
-                const lane2Status = document.getElementById('lane2Status');
-                const lane2Progress = document.getElementById('lane2Progress');
-                
-                if (lane2Reading) lane2Reading.textContent = `Distance: ${data.lane2.distance} mm`;
-                if (lane2Status) lane2Status.textContent = `Status: ${data.lane2.detected ? 'Car Detected' : 'Clear'}`;
-                
-                if (lane2Progress) {
-                    // Calculate percentage (assuming max distance is 1000mm)
-                    const maxDistance = 1000;
-                    const percentage = Math.max(0, Math.min(100, (1 - data.lane2.distance / maxDistance) * 100));
-                    lane2Progress.style.width = `${percentage}%`;
-                    lane2Progress.setAttribute('aria-valuenow', percentage);
-                    
-                    // Change color based on detection
-                    if (data.lane2.detected) {
-                        lane2Progress.className = 'progress-bar bg-success';
-                    } else {
-                        lane2Progress.className = 'progress-bar bg-primary';
-                    }
-                }
+            // Try to reconnect if not already attempting
+            if (reason !== 'io client disconnect') {
+                setTimeout(() => {
+                    console.log('Attempting to reconnect...');
+                    socket.connect();
+                }, 2000);
             }
         });
-        
-        socket.on('race_start', function(data) {
-            addLogMessage(`Race started: Heat ID ${data.heat_id}`, 'info');
-        });
-        
-        socket.on('race_finish', function(data) {
-            addLogMessage(`Race finished: Heat ID ${data.heat_id}`, 'success');
+
+        // WebSocket event handlers
+        socket.on('hardware_status', (data) => {
+            console.log('Received hardware status:', data);
+            addLogMessage(`Hardware status update: ${JSON.stringify(data)}`, 'info');
             
-            let resultsMsg = 'Results: ';
-            if (data.results) {
-                if (data.results.lane1) {
-                    resultsMsg += `Lane 1: ${data.results.lane1.time}ms`;
-                }
-                if (data.results.lane2) {
-                    resultsMsg += `, Lane 2: ${data.results.lane2.time}ms`;
-                }
-                if (data.results.winner) {
-                    resultsMsg += `, Winner: Lane ${data.results.winner}`;
-                }
+            // Update status indicators
+            const statusDisplay = document.getElementById('statusDisplay');
+            const hardwareStatusDetails = document.getElementById('hardwareStatusDetails');
+            
+            if (data.connected) {
+                statusDisplay.innerHTML = `
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Connection Status:</span>
+                        <span class="badge bg-success">Connected</span>
+                    </div>
+                    <div id="hardwareStatusDetails">
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Sensors:</span>
+                            <span class="badge ${data.sensors_calibrated ? 'bg-success' : 'bg-warning'}">
+                                ${data.sensors_calibrated ? 'Calibrated' : 'Needs Calibration'}
+                            </span>
+                        </div>
+                        <div class="d-flex justify-content-between mb-2">
+                            <span>Race State:</span>
+                            <span class="badge bg-info">${data.race_state || 'Unknown'}</span>
+                        </div>
+                        ${data.sensor_readings ? `
+                        <div class="mt-3">
+                            <h6>Sensor Readings:</h6>
+                            <pre class="bg-light p-2 rounded">${JSON.stringify(data.sensor_readings, null, 2)}</pre>
+                        </div>
+                        ` : ''}
+                    </div>
+                `;
+            } else {
+                statusDisplay.innerHTML = `
+                    <div class="d-flex justify-content-between mb-2">
+                        <span>Connection Status:</span>
+                        <span class="badge bg-warning">Disconnected</span>
+                    </div>
+                    <p class="text-center text-muted">Connect to ESP32 to view status</p>
+                `;
             }
-            
-            addLogMessage(resultsMsg, 'success');
         });
-        
-        socket.on('esp32_error', function(data) {
+
+        socket.on('sensor_reading', (data) => {
+            console.log('Received sensor_reading:', data);
+            updateSensorReadings(data);
+        });
+
+        socket.on('esp32_error', (data) => {
+            console.error('Received esp32_error:', data);
             addLogMessage(`ESP32 Error: ${data.message}`, 'error');
         });
-        
-        // Add initial log message
-        addLogMessage('Hardware management interface loaded', 'system');
+
+        // Function to update sensor readings
+        function updateSensorReadings(data) {
+            if (!data) return;
+            
+            if (data.sensor1 !== undefined) {
+                const lane1Progress = document.getElementById('lane1Progress');
+                const lane1Reading = document.getElementById('lane1Reading');
+                const lane1Status = document.getElementById('lane1StatusBadge');
+                
+                if (lane1Progress && lane1Reading && lane1Status) {
+                    // Update progress bar (assuming max distance is 1000mm)
+                    const progress = Math.min(100, (data.sensor1 / 1000) * 100);
+                    lane1Progress.style.width = `${progress}%`;
+                    lane1Progress.setAttribute('aria-valuenow', progress);
+                    
+                    // Update reading text
+                    lane1Reading.textContent = `Distance: ${data.sensor1} mm`;
+                    
+                    // Update status
+                    lane1Status.textContent = data.sensor1 < 150 ? 'Detected' : 'Clear';
+                    lane1Status.className = `badge ${data.sensor1 < 150 ? 'bg-success' : 'bg-secondary'}`;
+                }
+            }
+            
+            if (data.sensor2 !== undefined) {
+                const lane2Progress = document.getElementById('lane2Progress');
+                const lane2Reading = document.getElementById('lane2Reading');
+                const lane2Status = document.getElementById('lane2Status');
+                
+                if (lane2Progress && lane2Reading && lane2Status) {
+                    // Update progress bar (assuming max distance is 1000mm)
+                    const progress = Math.min(100, (data.sensor2 / 1000) * 100);
+                    lane2Progress.style.width = `${progress}%`;
+                    lane2Progress.setAttribute('aria-valuenow', progress);
+                    
+                    // Update reading text
+                    lane2Reading.textContent = `Distance: ${data.sensor2} mm`;
+                    
+                    // Update status
+                    lane2Status.innerHTML = `Status: <span class="badge ${data.sensor2 < 150 ? 'bg-success' : 'bg-secondary'}">
+                        ${data.sensor2 < 150 ? 'Detected' : 'Clear'}
+                    </span>`;
+                }
+            }
+        }
+
+        // Button handlers
+        document.getElementById('refreshPortsBtn').addEventListener('click', async () => {
+            try {
+                addLogMessage('Refreshing available ports...', 'info');
+                const response = await fetch('/hardware/ports');
+                const data = await response.json();
+                
+                const portSelect = document.getElementById('portSelect');
+                portSelect.innerHTML = '';
+                
+                data.ports.forEach(port => {
+                    const option = document.createElement('option');
+                    option.value = port;
+                    option.textContent = port;
+                    portSelect.appendChild(option);
+                });
+                
+                addLogMessage(`Found ${data.ports.length} ports`, 'success');
+            } catch (error) {
+                console.error('Error refreshing ports:', error);
+                addLogMessage(`Error refreshing ports: ${error.message}`, 'error');
+            }
+        });
+
+        document.getElementById('refreshStatusBtn').addEventListener('click', () => {
+            console.log('Requesting hardware status update...');
+            socket.emit('request_hardware_status');
+            addLogMessage('Requesting hardware status update...', 'info');
+        });
+
+        document.getElementById('calibrateBtn').addEventListener('click', async () => {
+            try {
+                addLogMessage('Starting sensor calibration...', 'info');
+                const response = await fetch('/hardware/calibrate', { method: 'POST' });
+                const data = await response.json();
+                addLogMessage(`Calibration response: ${JSON.stringify(data)}`, 'success');
+            } catch (error) {
+                console.error('Error during calibration:', error);
+                addLogMessage(`Calibration error: ${error.message}`, 'error');
+            }
+        });
+
+        document.getElementById('resetTimerBtn').addEventListener('click', async () => {
+            try {
+                addLogMessage('Resetting timer...', 'info');
+                const response = await fetch('/hardware/reset_timer', { method: 'POST' });
+                const data = await response.json();
+                addLogMessage(`Timer reset response: ${JSON.stringify(data)}`, 'success');
+            } catch (error) {
+                console.error('Error resetting timer:', error);
+                addLogMessage(`Timer reset error: ${error.message}`, 'error');
+            }
+        });
+
+        document.getElementById('testRaceBtn').addEventListener('click', async () => {
+            try {
+                addLogMessage('Starting test race...', 'info');
+                const response = await fetch('/hardware/test_race', { method: 'POST' });
+                const data = await response.json();
+                addLogMessage(`Test race response: ${JSON.stringify(data)}`, 'success');
+            } catch (error) {
+                console.error('Error during test race:', error);
+                addLogMessage(`Test race error: ${error.message}`, 'error');
+            }
+        });
+
+        // Race events
+        socket.on('race_start', (data) => {
+            console.log('Race started:', data);
+            addLogMessage(`Race started: ${JSON.stringify(data)}`, 'info');
+        });
+
+        socket.on('race_finish', (data) => {
+            console.log('Race finished:', data);
+            addLogMessage(`Race finished: ${JSON.stringify(data)}`, 'success');
+        });
+
+        // Clear log button
+        clearLogBtn.addEventListener('click', () => {
+            commLog.innerHTML = '';
+            addLogMessage('Log cleared', 'info');
+        });
+
+        // Periodic socket state logging
+        setInterval(() => {
+            const state = socket.connected ? 'connected' : 'disconnected';
+            console.log(`Socket state check: ${state} (${socket.id})`);
+        }, 10000);
+
+        // Initial connection attempt
+        if (!socket.connected) {
+            console.log('Initiating WebSocket connection...');
+            socket.connect();
+        }
     });
 </script>
 
