@@ -422,46 +422,25 @@ class SerialManager:
             db.session.rollback()
             return False
     
-    def start_race(self, heat_id):
-        """Send command to start a race for the given heat"""
+    def start_race(self, race_id):
+        """Send command to start a race"""
         try:
             from app import flask_app
             
             # Use the global flask_app reference
             with flask_app.app_context():
-                return self._do_start_race(heat_id)
+                race = Race.query.get(race_id)
+                if race:
+                    self.logger.info(f"Starting race id {race.id}")
+                    # Update race status in the database
+                    race.status = 'in_progress'
+                    race.start_time = datetime.utcnow()
+                    db.session.commit()
+                
+                return self.send_command("start_race", {"race_id": race_id})
         except Exception as e:
-            self.logger.error(f"Error finding race for heat: {e}")
-            return self.send_command("start_race", {"heat_id": heat_id})
-        
-    def _do_start_race(self, heat_id):
-        """Internal method to start a race within an application context"""
-        try:
-            # Find the heat first
-            from app.models.race import Heat, Race
-            
-            heat = Heat.query.get(heat_id)
-            
-            if not heat:
-                self.logger.error(f"Cannot find heat with ID {heat_id}")
-                return self.send_command("start_race", {"heat_id": heat_id})
-            
-            # Then find the associated race using round and heat numbers
-            race = Race.query.filter_by(
-                event_id=heat.round.event_id,
-                round_number=heat.round.number,
-                heat_number=heat.number
-            ).first()
-            
-            if race:
-                self.logger.info(f"Starting race id {race.id} for heat id {heat_id}")
-                return self.send_command("start_race", {"heat_id": heat_id, "race_id": race.id})
-            else:
-                self.logger.warning(f"No race found for heat id {heat_id}")
-                return self.send_command("start_race", {"heat_id": heat_id})
-        except Exception as e:
-            self.logger.error(f"Error in _do_start_race: {e}")
-            return self.send_command("start_race", {"heat_id": heat_id})
+            self.logger.error(f"Error starting race: {e}")
+            return self.send_command("start_race", {"race_id": race_id})
     
     def reset_timer(self):
         """Reset the race timer"""

@@ -24,7 +24,6 @@
             <div class="btn-group">
                 <button class="btn btn-primary" data-bs-toggle="modal" data-bs-target="#newRaceModal">Add Race</button>
                 <a href="{{ url_for('main.schedule_races', event_id=event.id) }}" class="btn btn-success">Schedule Races</a>
-                <a href="{{ url_for('main.event_rounds', event_id=event.id) }}" class="btn btn-info">View Rounds</a>
                 <a href="{{ url_for('main.event_standings', event_id=event.id) }}" class="btn btn-warning">Standings</a>
                 <a href="{{ url_for('export.export_event_menu', event_id=event.id) }}" class="btn btn-secondary"><i class="fas fa-file-export"></i> Export Data</a>
             </div>

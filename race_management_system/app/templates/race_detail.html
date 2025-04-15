@@ -6,13 +6,13 @@
         <ol class="breadcrumb">
             <li class="breadcrumb-item"><a href="{{ url_for('main.events') }}">Events</a></li>
             <li class="breadcrumb-item"><a href="{{ url_for('main.event_detail', event_id=race.event.id) }}">{{ race.event.name }}</a></li>
-            <li class="breadcrumb-item active">Round {{ race.round_number }} - Heat {{ race.heat_number }}</li>
+            <li class="breadcrumb-item active">Heat {{ race.heat_number }}</li>
         </ol>
     </nav>
 
     <div class="row mb-4">
         <div class="col-md-8">
-            <h1>Round {{ race.round_number }} - Heat {{ race.heat_number }}</h1>
+            <h1>Heat {{ race.heat_number }}</h1>
             <p class="lead">
                 <strong>Event:</strong> {{ race.event.name }}<br>
                 <strong>Start Time:</strong> {{ race.start_time.strftime('%H:%M') if race.start_time else 'Not started' }}<br>
@@ -30,7 +30,7 @@
         </div>
         <div class="col-md-4 text-end">
             {% if race.status == 'scheduled' %}
-                <button class="btn btn-success" id="startRaceBtn">Start Round</button>
+                <button class="btn btn-success" id="startRaceBtn">Start Race</button>
             {% elif race.status == 'in_progress' %}
                 <button class="btn btn-danger" id="endRaceBtn">End Race</button>
                 <button class="btn btn-primary" id="fireRelayBtn" disabled>Start Race</button>
@@ -239,38 +239,44 @@
                 console.log('Race completed:', data);
                 clearInterval(timerInterval);
                 
-                // Determine winner and update UI
-                const car1Time = (data.car1_time / 1000).toFixed(3);
-                const car2Time = (data.car2_time / 1000).toFixed(3);
-                
-                document.getElementById('lane1Time').textContent = car1Time;
-                document.getElementById('lane2Time').textContent = car2Time;
-                
-                document.getElementById('lane1Status').textContent = 'Finished';
-                document.getElementById('lane2Status').textContent = 'Finished';
-                
-                document.getElementById('lane1Progress').style.width = '100%';
-                document.getElementById('lane2Progress').style.width = '100%';
-                
-                // Highlight winner
-                if (data.winner === 'car1') {
-                    document.getElementById('lane1Status').textContent = 'Winner!';
-                    document.getElementById('lane1Status').classList.add('text-success', 'fw-bold');
-                } else if (data.winner === 'car2') {
-                    document.getElementById('lane2Status').textContent = 'Winner!';
-                    document.getElementById('lane2Status').classList.add('text-success', 'fw-bold');
-                } else {
-                    // Tie
-                    document.getElementById('lane1Status').textContent = 'Tie!';
-                    document.getElementById('lane2Status').textContent = 'Tie!';
-                    document.getElementById('lane1Status').classList.add('text-warning', 'fw-bold');
-                    document.getElementById('lane2Status').classList.add('text-warning', 'fw-bold');
+                // Update the UI with final times
+                if (data.car1_time) {
+                    const time = (data.car1_time / 1000).toFixed(3);
+                    document.getElementById('lane1Time').textContent = time;
+                    document.getElementById('lane1Status').textContent = 'Finished!';
+                    document.getElementById('lane1Status').classList.add('text-success');
+                    document.getElementById('lane1Progress').style.width = '100%';
                 }
                 
-                // After a short delay, refresh page to update race status
+                if (data.car2_time) {
+                    const time = (data.car2_time / 1000).toFixed(3);
+                    document.getElementById('lane2Time').textContent = time;
+                    document.getElementById('lane2Status').textContent = 'Finished!';
+                    document.getElementById('lane2Status').classList.add('text-success');
+                    document.getElementById('lane2Progress').style.width = '100%';
+                }
+                
+                // Update race state
+                raceState = "FINISHED";
+                updateRaceStateDisplay();
+                
+                // Refresh page after a delay to show final results
                 setTimeout(function() {
-                    location.reload();
-                }, 5000);
+                    window.location.reload();
+                }, 3000);
+            });
+            
+            // Race status update event
+            socket.on('race_status_updated', function(data) {
+                console.log('Race status update:', data);
+                
+                // If this update is about our race and it's now completed, refresh the page
+                if (data.race_id === {{ race.id }} && data.status === 'completed') {
+                    // Refresh the page after a short delay to show the completed status
+                    setTimeout(function() {
+                        window.location.reload();
+                    }, 1500);
+                }
             });
             
             // Function to update elapsed time display

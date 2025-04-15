@@ -38,7 +38,6 @@ def create_app():
     from app.routes.main import main_bp
     from app.routes.api import api_bp
     from app.routes.auth import auth_bp
-    from app.routes.on_deck import on_deck_bp
     from app.routes.export import export_bp
     from app.routes.check_in import check_in_bp
     from app.routes.countdown import countdown_bp
@@ -47,7 +46,6 @@ def create_app():
     app.register_blueprint(main_bp)
     app.register_blueprint(api_bp, url_prefix='/api')
     app.register_blueprint(auth_bp, url_prefix='/auth')
-    app.register_blueprint(on_deck_bp)
     app.register_blueprint(export_bp, url_prefix='/export')
     app.register_blueprint(check_in_bp)
     app.register_blueprint(countdown_bp)

@@ -31,7 +31,6 @@
 - [x] Basic race control (start/end)
 - [x] Race results tracking
 - [x] Race scheduling system
-  - [x] Round-robin scheduling algorithm
   - [x] Automatic heat generation
   - [x] Automatic race creation for heats
   - [x] Time scheduling for consecutive races
@@ -56,6 +55,10 @@
   - [x] Race result creation with lane assignments
   - [x] Error handling for race timing data
 - [ ] Race result verification
+- [x] Simplified race structure
+  - [x] Removed rounds functionality
+  - [x] Updated UI to directly manage heats
+  - [x] Modified export system to work with simplified structure
 
 ## Racer Management
 - [x] Create racer model
@@ -88,7 +91,6 @@
 - [x] Result export (Excel)
   - [x] Event results export
   - [x] Event standings export
-  - [x] Round results export
   - [x] Heat results export
 - [ ] Data import functionality
 - [ ] Database migrations
@@ -97,13 +99,6 @@
 ## UI/UX Improvements
 - [x] Responsive design with Bootstrap
 - [x] Flash message system
-- [x] On Deck display system
-  - [x] Current and next heat visualization
-  - [x] Color-coded lane cards
-  - [x] Real-time countdown timers
-  - [x] Race preparation checklist
-  - [x] Lane status indicators
-- [x] Race preparation countdown
 - [x] Enhanced lane assignments display
 - [x] Race visualization improvements
   - [x] Racer identification in lane displays
@@ -190,9 +185,10 @@
 6. Set up production deployment
 
 Next priorities:
-1. Complete UI/UX improvements for better usability
-2. Implement data backup and archiving system
-3. Add advanced race analytics
+1. ✅ Simplify race management structure
+2. Complete UI/UX improvements for better usability
+3. Implement data backup and archiving system
+4. Add advanced race analytics
 
 Notes:
 - [x] = Completed

@@ -55,41 +55,7 @@
     </div>
 
     <div class="row">
-        <div class="col-md-6 mb-4">
-            <div class="card">
-                <div class="card-header bg-success text-white">
-                    <h5 class="card-title mb-0">Recent Rounds</h5>
-                </div>
-                <div class="card-body">
-                    <div class="table-responsive">
-                        <table class="table table-hover">
-                            <thead>
-                                <tr>
-                                    <th>Event</th>
-                                    <th>Round</th>
-                                    <th>Export</th>
-                                </tr>
-                            </thead>
-                            <tbody>
-                                {% for round in rounds %}
-                                <tr>
-                                    <td>{{ round.event.name }}</td>
-                                    <td>{{ round.name }}</td>
-                                    <td>
-                                        <a href="{{ url_for('export.export_round_results', round_id=round.id) }}" class="btn btn-sm btn-outline-success">
-                                            <i class="fas fa-file-excel"></i> Export
-                                        </a>
-                                    </td>
-                                </tr>
-                                {% endfor %}
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-md-6 mb-4">
+        <div class="col-md-12 mb-4">
             <div class="card">
                 <div class="card-header bg-success text-white">
                     <h5 class="card-title mb-0">Recent Heats</h5>
@@ -100,19 +66,23 @@
                             <thead>
                                 <tr>
                                     <th>Event</th>
-                                    <th>Round</th>
                                     <th>Heat</th>
+                                    <th>Status</th>
                                     <th>Export</th>
                                 </tr>
                             </thead>
                             <tbody>
-                                {% for heat in heats %}
+                                {% for race in races %}
                                 <tr>
-                                    <td>{{ heat.round.event.name }}</td>
-                                    <td>{{ heat.round.name }}</td>
-                                    <td>Heat {{ heat.number }}</td>
+                                    <td>{{ race.event.name }}</td>
+                                    <td>Heat {{ race.heat_number }}</td>
                                     <td>
-                                        <a href="{{ url_for('export.export_heat_results', heat_id=heat.id) }}" class="btn btn-sm btn-outline-success">
+                                        <span class="badge {% if race.status == 'scheduled' %}bg-primary{% elif race.status == 'in_progress' %}bg-warning{% else %}bg-success{% endif %}">
+                                            {{ race.status|capitalize }}
+                                        </span>
+                                    </td>
+                                    <td>
+                                        <a href="{{ url_for('export.export_heat_results', heat_id=race.id) }}" class="btn btn-sm btn-outline-success">
                                             <i class="fas fa-file-excel"></i> Export
                                         </a>
                                     </td>
@@ -134,33 +104,23 @@
                 </div>
                 <div class="card-body">
                     <div class="row">
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-6 mb-3">
                             <div class="card h-100">
                                 <div class="card-body text-center">
                                     <i class="fas fa-calendar-alt fa-3x mb-3 text-success"></i>
                                     <h5 class="card-title">Event Results</h5>
                                     <p class="card-text">Export complete results for an entire event</p>
-                                    <p class="text-muted small">Includes all rounds, heats, and race times</p>
+                                    <p class="text-muted small">Includes all heats and race times</p>
                                 </div>
                             </div>
                         </div>
-                        <div class="col-md-4 mb-3">
+                        <div class="col-md-6 mb-3">
                             <div class="card h-100">
                                 <div class="card-body text-center">
                                     <i class="fas fa-trophy fa-3x mb-3 text-warning"></i>
                                     <h5 class="card-title">Standings</h5>
                                     <p class="card-text">Export current standings and rankings</p>
                                     <p class="text-muted small">Includes points, best times, and race statistics</p>
-                                </div>
-                            </div>
-                        </div>
-                        <div class="col-md-4 mb-3">
-                            <div class="card h-100">
-                                <div class="card-body text-center">
-                                    <i class="fas fa-flag-checkered fa-3x mb-3 text-danger"></i>
-                                    <h5 class="card-title">Heat Results</h5>
-                                    <p class="card-text">Export results for individual heats</p>
-                                    <p class="text-muted small">Includes lane assignments and race times</p>
                                 </div>
                             </div>
                         </div>

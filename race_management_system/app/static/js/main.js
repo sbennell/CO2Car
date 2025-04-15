@@ -279,4 +279,43 @@ function showErrorNotification(message) {
     notification.addEventListener('hidden.bs.toast', function() {
         notification.remove();
     });
+}
+
+/**
+ * Refresh the page if the current page is related to the race that was updated
+ */
+function refreshPageIfNeeded(data) {
+    // Get the current URL
+    const currentUrl = window.location.pathname;
+    
+    // Check if we're on an event detail page
+    if (currentUrl.includes('/events/') && !currentUrl.includes('/rounds') && data.event_id) {
+        console.log('Refreshing event detail page due to race status update');
+        window.location.reload();
+        return;
+    }
+    
+    // Check if we're on a race detail page
+    if (currentUrl.includes('/races/') && data.race_id) {
+        const raceIdInUrl = parseInt(currentUrl.split('/').pop());
+        if (raceIdInUrl === data.race_id) {
+            console.log('Refreshing race detail page due to race status update');
+            window.location.reload();
+            return;
+        }
+    }
+    
+    // Check if we're on a round detail page
+    if (currentUrl.includes('/rounds/') && data.round_number) {
+        console.log('Refreshing round detail page due to race status update');
+        window.location.reload();
+        return;
+    }
+    
+    // Check if we're on the dashboard
+    if (currentUrl === '/dashboard') {
+        console.log('Refreshing dashboard due to race status update');
+        window.location.reload();
+        return;
+    }
 } 

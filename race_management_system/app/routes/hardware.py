@@ -83,12 +83,12 @@ def hardware_status():
 def start_race():
     """Send command to start a race"""
     data = request.json
-    heat_id = data.get('heat_id')
+    race_id = data.get('race_id')
     
-    if not heat_id:
+    if not race_id:
         return jsonify({
             'success': False,
-            'message': 'Heat ID is required'
+            'message': 'Race ID is required'
         }), 400
     
     serial_manager = get_serial_manager()
@@ -99,7 +99,7 @@ def start_race():
             'message': 'Not connected to ESP32 hardware'
         }), 400
     
-    success = serial_manager.start_race(heat_id)
+    success = serial_manager.send_command("start_race", {"race_id": race_id})
     
     return jsonify({
         'success': success,

@@ -5,6 +5,24 @@ All notable changes to the CO2 Car Race Management System will be documented in 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en/1.0.0/),
 and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0.html).
 
+## [0.11.0] - 2025-04-20
+
+### Changed
+- Simplified Race Management System:
+  - Removed rounds functionality for a more streamlined experience
+  - Flattened race hierarchy to directly manage heats within events
+  - Updated UI to show heats without round categorization
+  - Modified export system to work directly with races
+  - Improved navigation by removing unnecessary round-related steps
+  - Streamlined templates for better usability
+
+### Removed
+- Round-specific functionality:
+  - Removed round detail and listing pages
+  - Eliminated round exports
+  - Removed round navigation in breadcrumbs
+  - Removed On Deck feature which was not working correctly
+
 ## [0.10.3] - 2025-04-18
 
 ### Added
