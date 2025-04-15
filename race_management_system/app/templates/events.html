@@ -18,10 +18,12 @@
                         <p class="card-text">
                             <strong>Location:</strong> {{ event.location }}<br>
                             <strong>Status:</strong> 
-                            {% if event.date > now %}
+                            {% if event.date and event.date > now %}
                                 <span class="badge bg-primary">Upcoming</span>
-                            {% else %}
+                            {% elif event.date %}
                                 <span class="badge bg-success">Completed</span>
+                            {% else %}
+                                <span class="badge bg-secondary">No Date</span>
                             {% endif %}
                         </p>
                         <div class="d-flex justify-content-between align-items-center">
@@ -54,7 +56,7 @@
                 <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
             </div>
             <div class="modal-body">
-                <form method="POST" action="{{ url_for('main.create_event') }}">
+                <form method="POST" action="{{ url_for('main.create_event') }}" id="newEventForm">
                     <div class="mb-3">
                         <label for="eventName" class="form-label">Event Name</label>
                         <input type="text" class="form-control" id="eventName" name="name" required>
@@ -71,7 +73,7 @@
                         <label for="eventDescription" class="form-label">Description</label>
                         <textarea class="form-control" id="eventDescription" name="description" rows="3"></textarea>
                     </div>
-                    <button type="submit" class="btn btn-primary">Create Event</button>
+                    <button type="submit" class="btn btn-primary" id="createEventBtn">Create Event</button>
                 </form>
             </div>
         </div>
@@ -102,4 +104,35 @@
     </div>
     {% endif %}
     {% endfor %}
+{% endblock %}
+
+{% block scripts %}
+<script>
+    document.addEventListener('DOMContentLoaded', function() {
+        const newEventForm = document.getElementById('newEventForm');
+        
+        if (newEventForm) {
+            newEventForm.addEventListener('submit', function(event) {
+                const submitBtn = document.getElementById('createEventBtn');
+                submitBtn.disabled = true;
+                submitBtn.innerHTML = '<span class="spinner-border spinner-border-sm" role="status" aria-hidden="true"></span> Creating...';
+            });
+        }
+        
+        // Set default date to today for new events
+        const eventDateInput = document.getElementById('eventDate');
+        if (eventDateInput) {
+            const today = new Date();
+            const year = today.getFullYear();
+            let month = today.getMonth() + 1;
+            let day = today.getDate();
+            
+            // Format with leading zeros
+            month = month < 10 ? '0' + month : month;
+            day = day < 10 ? '0' + day : day;
+            
+            eventDateInput.value = `${year}-${month}-${day}`;
+        }
+    });
+</script>
 {% endblock %}

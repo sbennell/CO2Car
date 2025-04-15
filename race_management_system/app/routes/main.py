@@ -165,12 +165,37 @@ def race_detail(race_id):
 def start_race(race_id):
     """Start a race"""
     race = Race.query.get_or_404(race_id)
+    
+    # Only start if race is in scheduled state
     if race.status == 'scheduled':
+        # Update race status to prevent duplicate starts
         race.status = 'in_progress'
         race.start_time = datetime.utcnow()
         db.session.commit()
-        return jsonify({'status': 'success'})
-    return jsonify({'status': 'error', 'message': 'Race cannot be started'}), 400
+        
+        try:
+            # Import here to avoid circular imports
+            from app.utils.serial_manager import get_serial_manager
+            serial_manager = get_serial_manager()
+            
+            # Check if hardware is connected before attempting to start race
+            if serial_manager and serial_manager.is_connected():
+                # Send command to hardware to start the race - with skip_confirm=True to avoid second confirmation
+                serial_manager.send_command({
+                    'cmd': 'startRace',
+                    'race_id': str(race_id),
+                    'skip_confirm': True
+                })
+                flash('Race started successfully', 'success')
+            else:
+                flash('Race started (hardware not connected)', 'warning')
+        except Exception as e:
+            flash(f'Race started (hardware error: {str(e)})', 'warning')
+            
+        return redirect(url_for('main.race_detail', race_id=race_id))
+    else:
+        flash('Race cannot be started (already in progress or completed)', 'error')
+        return redirect(url_for('main.race_detail', race_id=race_id))
 
 @main_bp.route('/races/<int:race_id>/end', methods=['POST'])
 @login_required

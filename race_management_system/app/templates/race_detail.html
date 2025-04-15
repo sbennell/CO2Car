@@ -30,10 +30,15 @@
         </div>
         <div class="col-md-4 text-end">
             {% if race.status == 'scheduled' %}
-                <button class="btn btn-success" id="startRaceBtn">Start Race</button>
+                <form id="startRaceForm" action="{{ url_for('main.start_race', race_id=race.id) }}" method="POST" onsubmit="console.log('Form submit event triggered'); return window.confirm('Are you sure you want to start the race?') && (console.log('Confirmed, disabling button'), this.querySelector('button').disabled = true, true);">
+                    <input type="hidden" name="confirmed" value="true">
+                    <button type="submit" class="btn btn-success" id="startRaceBtn">Start Race</button>
+                </form>
             {% elif race.status == 'in_progress' %}
-                <button class="btn btn-danger" id="endRaceBtn">End Race</button>
-                <button class="btn btn-primary" id="fireRelayBtn" disabled>Start Race</button>
+                <form id="endRaceForm" action="{{ url_for('main.end_race', race_id=race.id) }}" method="POST" onsubmit="return confirm('Are you sure you want to end the race?') && (this.querySelector('button').disabled = true, true);">
+                    <button type="submit" class="btn btn-danger" id="endRaceBtn">End Race</button>
+                </form>
+                <button class="btn btn-primary" id="fireRelayBtn" disabled>Fire Car</button>
             {% endif %}
         </div>
     </div>
@@ -122,313 +127,222 @@
 
 {% block scripts %}
 <script>
+    // Flag to make sure our setup only runs once
+    var setupComplete = false;
+    
     document.addEventListener('DOMContentLoaded', function() {
-        {% if race.status == 'in_progress' %}
-            // Connect to WebSocket for live race data
-            const socket = io();
-            let raceStartTime = null;
-            let raceState = "UNKNOWN";
-            let timerInterval = null;
-            
-            // Request initial hardware status when page loads
-            fetch('/api/hardware/status')
-                .then(response => response.json())
-                .then(data => {
-                    console.log('Initial hardware status:', data);
-                    if (data.connected) {
-                        // Update status display if connected
-                        if (data.status && data.status.race_state) {
-                            raceState = data.status.race_state;
-                            updateRaceStateDisplay();
-                        } else if (data.race_state) {
-                            // Alternative data format
-                            raceState = data.race_state;
-                            updateRaceStateDisplay();
-                        }
-                    } else {
-                        // Show disconnected state
-                        document.getElementById('raceState').textContent = "DISCONNECTED";
-                        document.getElementById('raceState').className = "badge bg-danger";
-                    }
-                })
-                .catch(error => {
-                    console.error('Error fetching hardware status:', error);
-                });
-            
-            // Handle hardware status updates
-            socket.on('hardware_status', function(data) {
-                console.log('Hardware status update:', data);
-                
-                // Handle different data formats
-                if (data.status && data.status.race_state) {
-                    raceState = data.status.race_state;
-                    updateRaceStateDisplay();
-                } else if (data.race_state) {
-                    raceState = data.race_state;
-                    updateRaceStateDisplay();
-                } else if (typeof data === 'object') {
-                    // Log what fields are actually available for debugging
-                    console.log('Available fields in hardware_status:', Object.keys(data));
-                    
-                    // Try to find race_state in the data object at any level
-                    for (const key in data) {
-                        if (typeof data[key] === 'object' && data[key] !== null) {
-                            if (data[key].race_state) {
-                                console.log('Found race_state in nested object:', key);
-                                raceState = data[key].race_state;
-                                updateRaceStateDisplay();
-                                break;
-                            }
-                        }
-                    }
-                }
-            });
-            
-            // Race started event
-            socket.on('race_start', function(data) {
-                console.log('Race start:', data);
-                raceStartTime = Date.now();
-                
-                document.getElementById('lane1Status').textContent = 'Racing...';
-                document.getElementById('lane2Status').textContent = 'Racing...';
-                
-                // Start elapsed time counter
-                clearInterval(timerInterval);
-                timerInterval = setInterval(updateElapsedTime, 100);
-            });
-            
-            // Race update event
-            socket.on('race_update', function(data) {
-                console.log('Race update:', data);
-                
-                // Update lane 1 data
-                if (data.car1_finished) {
-                    const time = (data.car1_time / 1000).toFixed(3);
-                    document.getElementById('lane1Time').textContent = time;
-                    document.getElementById('lane1Status').textContent = 'Finished!';
-                    document.getElementById('lane1Status').classList.add('text-success');
-                    document.getElementById('lane1Progress').style.width = '100%';
-                }
-                
-                // Update lane 2 data
-                if (data.car2_finished) {
-                    const time = (data.car2_time / 1000).toFixed(3);
-                    document.getElementById('lane2Time').textContent = time;
-                    document.getElementById('lane2Status').textContent = 'Finished!';
-                    document.getElementById('lane2Status').classList.add('text-success');
-                    document.getElementById('lane2Progress').style.width = '100%';
-                }
-                
-                // Update progress bars for lanes that haven't finished
-                const elapsedMs = data.elapsed_time || 0;
-                const estimatedMaxTime = 5000; // 5 seconds estimated max time
-                
-                if (!data.car1_finished) {
-                    const progress = Math.min(100, (elapsedMs / estimatedMaxTime) * 100);
-                    document.getElementById('lane1Progress').style.width = progress + '%';
-                }
-                
-                if (!data.car2_finished) {
-                    const progress = Math.min(100, (elapsedMs / estimatedMaxTime) * 100);
-                    document.getElementById('lane2Progress').style.width = progress + '%';
-                }
-            });
-            
-            // Race completed event
-            socket.on('race_completed', function(data) {
-                console.log('Race completed:', data);
-                clearInterval(timerInterval);
-                
-                // Update the UI with final times
-                if (data.car1_time) {
-                    const time = (data.car1_time / 1000).toFixed(3);
-                    document.getElementById('lane1Time').textContent = time;
-                    document.getElementById('lane1Status').textContent = 'Finished!';
-                    document.getElementById('lane1Status').classList.add('text-success');
-                    document.getElementById('lane1Progress').style.width = '100%';
-                }
-                
-                if (data.car2_time) {
-                    const time = (data.car2_time / 1000).toFixed(3);
-                    document.getElementById('lane2Time').textContent = time;
-                    document.getElementById('lane2Status').textContent = 'Finished!';
-                    document.getElementById('lane2Status').classList.add('text-success');
-                    document.getElementById('lane2Progress').style.width = '100%';
-                }
-                
-                // Update race state
-                raceState = "FINISHED";
-                updateRaceStateDisplay();
-                
-                // Refresh page after a delay to show final results
-                setTimeout(function() {
-                    window.location.reload();
-                }, 3000);
-            });
-            
-            // Race status update event
-            socket.on('race_status_updated', function(data) {
-                console.log('Race status update:', data);
-                
-                // If this update is about our race and it's now completed, refresh the page
-                if (data.race_id === {{ race.id }} && data.status === 'completed') {
-                    // Refresh the page after a short delay to show the completed status
-                    setTimeout(function() {
-                        window.location.reload();
-                    }, 1500);
-                }
-            });
-            
-            // Function to update elapsed time display
-            function updateElapsedTime() {
-                if (!raceStartTime) return;
-                
-                const elapsed = Date.now() - raceStartTime;
-                const seconds = (elapsed / 1000).toFixed(3);
-                document.getElementById('raceElapsedTime').textContent = `Elapsed Time: ${seconds}s`;
-            }
-            
-            // Function to update race state display and button state
-            function updateRaceStateDisplay() {
-                const raceStateElement = document.getElementById('raceState');
-                raceStateElement.textContent = raceState;
-                
-                // Update badge color based on state
-                raceStateElement.className = "badge";
-                switch(raceState) {
-                    case "IDLE":
-                        raceStateElement.classList.add("bg-secondary");
-                        break;
-                    case "CARS_LOADED":
-                        raceStateElement.classList.add("bg-info");
-                        break;
-                    case "RACE_READY":
-                        raceStateElement.classList.add("bg-primary");
-                        break;
-                    case "COUNTDOWN":
-                        raceStateElement.classList.add("bg-warning");
-                        break;
-                    case "RACING":
-                        raceStateElement.classList.add("bg-danger");
-                        break;
-                    case "RACE_FINISHED":
-                        raceStateElement.classList.add("bg-success");
-                        break;
-                    default:
-                        raceStateElement.classList.add("bg-secondary");
-                }
-                
-                // Enable/disable the Start Race button based on race state
-                const fireRelayBtn = document.getElementById('fireRelayBtn');
-                if (fireRelayBtn) {
-                    if (raceState === "CARS_LOADED") {
-                        fireRelayBtn.disabled = false;
-                        fireRelayBtn.title = "Cars loaded and ready to race";
-                    } else {
-                        fireRelayBtn.disabled = true;
-                        fireRelayBtn.title = "Cars must be loaded before firing relay";
-                    }
-                }
-            }
-        {% endif %}
-
-        // Handle race control buttons
-        const startRaceBtn = document.getElementById('startRaceBtn');
-        const endRaceBtn = document.getElementById('endRaceBtn');
-
-        if (startRaceBtn) {
-            startRaceBtn.addEventListener('click', function() {
-                fetch('{{ url_for("main.start_race", race_id=race.id) }}', {
-                    method: 'POST'
-                }).then(function(response) {
-                    if (response.ok) {
-                        location.reload();
-                    }
-                });
-            });
+        // Only run setup once to prevent duplicate handlers
+        if (setupComplete) {
+            console.log('Setup already completed, ignoring duplicate call');
+            return;
         }
-
-        if (endRaceBtn) {
-            endRaceBtn.addEventListener('click', function() {
-                fetch('{{ url_for("main.end_race", race_id=race.id) }}', {
-                    method: 'POST'
-                }).then(function(response) {
-                    if (response.ok) {
-                        location.reload();
-                    }
-                });
-            });
-        }
-
-        // Handle fire relay button
+        
+        console.log('Running initial setup');
+        setupComplete = true;
+        
+        // Only handle the Fire Relay button
         const fireRelayBtn = document.getElementById('fireRelayBtn');
         if (fireRelayBtn) {
-            // Use a flag to track if a request is in progress
-            let relayRequestInProgress = false;
+            console.log('Setting up Fire Relay button handler');
+            // Flag to prevent multiple clicks
+            let requestInProgress = false;
             
-            // Only attach the event listener once
-            fireRelayBtn.addEventListener('click', function handleRelayClick(event) {
-                // Prevent double-clicks or clicks while a request is in progress
-                if (relayRequestInProgress) {
-                    console.log('Ignoring click - request already in progress');
+            fireRelayBtn.addEventListener('click', function() {
+                console.log('Fire relay button clicked');
+                // Prevent duplicate requests
+                if (requestInProgress) {
+                    console.log('Request already in progress, ignoring click');
                     return;
                 }
                 
-                // Only allow if race state is CARS_LOADED
-                if (raceState !== "CARS_LOADED") {
+                // Check race state
+                const raceStateEl = document.getElementById('raceState');
+                if (raceStateEl && raceStateEl.textContent !== "CARS_LOADED") {
                     alert("Cars must be loaded before starting the race.");
                     return;
                 }
                 
-                if (confirm('Are you sure you want to start the race?')) {
-                    // Set flag to prevent multiple requests
-                    relayRequestInProgress = true;
-                    
-                    // Disable button immediately
+                if (confirm('Are you sure you want to fire the relay?')) {
+                    console.log('Confirmed, sending command to start race');
+                    requestInProgress = true;
                     fireRelayBtn.disabled = true;
                     fireRelayBtn.textContent = 'Starting race...';
                     
                     fetch('/api/hardware/send_command', {
                         method: 'POST',
-                        headers: {
-                            'Content-Type': 'application/json'
-                        },
+                        headers: { 'Content-Type': 'application/json' },
                         body: JSON.stringify({
                             command: 'startRace',
-                            race_id: '{{ race.id }}'
+                            race_id: '{{ race.id }}',
+                            skip_confirm: true
                         })
                     })
                     .then(response => response.json())
                     .then(data => {
                         if (data.success) {
-                            console.log('Race started successfully');
-                            // Change button appearance to show it was triggered
+                            console.log('Race started successfully via hardware command');
                             fireRelayBtn.classList.remove('btn-primary');
                             fireRelayBtn.classList.add('btn-success');
                             fireRelayBtn.textContent = 'Race Started';
-                            
-                            // Remove the click event to prevent further clicks
-                            fireRelayBtn.removeEventListener('click', handleRelayClick);
                         } else {
-                            alert('Error starting race: ' + data.message);
-                            // Reset button if there was an error
+                            alert('Error starting race: ' + (data.message || 'Unknown error'));
                             fireRelayBtn.disabled = false;
                             fireRelayBtn.textContent = 'Fire Relay';
-                            relayRequestInProgress = false;
+                            requestInProgress = false;
                         }
                     })
                     .catch(error => {
                         console.error('Error:', error);
                         alert('Error communicating with the server');
-                        // Reset button if there was an error
                         fireRelayBtn.disabled = false;
                         fireRelayBtn.textContent = 'Fire Relay';
-                        relayRequestInProgress = false;
+                        requestInProgress = false;
                     });
                 }
             });
         }
+        
+        {% if race.status == 'in_progress' %}
+            // Setup WebSocket for live race data
+            setupWebSocket();
+        {% endif %}
     });
+    
+    // WebSocket setup for live race data
+    function setupWebSocket() {
+        console.log('Setting up WebSocket connection');
+        const socket = io();
+        let raceStartTime = null;
+        let raceState = "UNKNOWN";
+        let timerInterval = null;
+        
+        // Initial hardware status
+        fetch('/api/hardware/status')
+            .then(response => response.json())
+            .then(data => {
+                if (data.connected) {
+                    updateRaceState(data);
+                } else {
+                    document.getElementById('raceState').textContent = "DISCONNECTED";
+                    document.getElementById('raceState').className = "badge bg-danger";
+                }
+            })
+            .catch(error => console.error('Error fetching hardware status:', error));
+        
+        // Hardware status updates
+        socket.on('hardware_status', function(data) {
+            console.log('Hardware status update:', data);
+            updateRaceState(data);
+        });
+        
+        // Race events
+        socket.on('race_start', function(data) {
+            console.log('Race start:', data);
+            raceStartTime = Date.now();
+            document.getElementById('lane1Status').textContent = 'Racing...';
+            document.getElementById('lane2Status').textContent = 'Racing...';
+            clearInterval(timerInterval);
+            timerInterval = setInterval(updateElapsedTime, 100);
+        });
+        
+        socket.on('race_update', function(data) {
+            console.log('Race update:', data);
+            updateLaneData(data);
+        });
+        
+        socket.on('race_completed', function(data) {
+            console.log('Race completed:', data);
+            clearInterval(timerInterval);
+            updateLaneData(data);
+            raceState = "FINISHED";
+            updateRaceStateDisplay();
+            setTimeout(() => window.location.reload(), 3000);
+        });
+        
+        socket.on('race_status_updated', function(data) {
+            if (data.race_id === {{ race.id }} && data.status === 'completed') {
+                setTimeout(() => window.location.reload(), 1500);
+            }
+        });
+        
+        // Helper functions
+        function updateElapsedTime() {
+            if (!raceStartTime) return;
+            const elapsed = Date.now() - raceStartTime;
+            const seconds = (elapsed / 1000).toFixed(3);
+            document.getElementById('raceElapsedTime').textContent = `Elapsed Time: ${seconds}s`;
+        }
+        
+        function updateLaneData(data) {
+            // Lane 1
+            if (data.car1_finished) {
+                const time = (data.car1_time / 1000).toFixed(3);
+                document.getElementById('lane1Time').textContent = time;
+                document.getElementById('lane1Status').textContent = 'Finished!';
+                document.getElementById('lane1Status').classList.add('text-success');
+                document.getElementById('lane1Progress').style.width = '100%';
+            } else if (data.elapsed_time) {
+                const progress = Math.min(100, (data.elapsed_time / 5000) * 100);
+                document.getElementById('lane1Progress').style.width = progress + '%';
+            }
+            
+            // Lane 2
+            if (data.car2_finished) {
+                const time = (data.car2_time / 1000).toFixed(3);
+                document.getElementById('lane2Time').textContent = time;
+                document.getElementById('lane2Status').textContent = 'Finished!';
+                document.getElementById('lane2Status').classList.add('text-success');
+                document.getElementById('lane2Progress').style.width = '100%';
+            } else if (data.elapsed_time) {
+                const progress = Math.min(100, (data.elapsed_time / 5000) * 100);
+                document.getElementById('lane2Progress').style.width = progress + '%';
+            }
+        }
+        
+        function updateRaceState(data) {
+            if (data.status && data.status.race_state) {
+                raceState = data.status.race_state;
+            } else if (data.race_state) {
+                raceState = data.race_state;
+            } else if (typeof data === 'object') {
+                for (const key in data) {
+                    if (typeof data[key] === 'object' && data[key] !== null && data[key].race_state) {
+                        raceState = data[key].race_state;
+                        break;
+                    }
+                }
+            }
+            updateRaceStateDisplay();
+        }
+        
+        function updateRaceStateDisplay() {
+            const raceStateElement = document.getElementById('raceState');
+            raceStateElement.textContent = raceState;
+            
+            raceStateElement.className = "badge";
+            switch(raceState) {
+                case "IDLE": raceStateElement.classList.add("bg-secondary"); break;
+                case "CARS_LOADED": raceStateElement.classList.add("bg-info"); break;
+                case "RACE_READY": raceStateElement.classList.add("bg-primary"); break;
+                case "COUNTDOWN": raceStateElement.classList.add("bg-warning"); break;
+                case "RACING": raceStateElement.classList.add("bg-danger"); break;
+                case "RACE_FINISHED": raceStateElement.classList.add("bg-success"); break;
+                default: raceStateElement.classList.add("bg-secondary");
+            }
+            
+            // Update Fire Relay button state
+            const fireRelayBtn = document.getElementById('fireRelayBtn');
+            if (fireRelayBtn) {
+                if (raceState === "CARS_LOADED") {
+                    fireRelayBtn.disabled = false;
+                    fireRelayBtn.title = "Cars loaded and ready to race";
+                } else {
+                    fireRelayBtn.disabled = true;
+                    fireRelayBtn.title = "Cars must be loaded before firing relay";
+                }
+            }
+        }
+    }
 </script>
 {% endblock %}
 {% endblock %}

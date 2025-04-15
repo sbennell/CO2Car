@@ -138,6 +138,10 @@ class SerialManager:
             cmd_obj = {"cmd": command}
             if params:
                 cmd_obj.update(params)
+                
+            # For startRace commands, make sure we pass through the skip_confirm flag
+            if command == "startRace" and "skip_confirm" not in cmd_obj:
+                cmd_obj["skip_confirm"] = True  # Default to skipping confirmation for web-initiated starts
             
             cmd_str = json.dumps(cmd_obj) + "\n"
             self.serial_port.write(cmd_str.encode())
@@ -430,17 +434,31 @@ class SerialManager:
             # Use the global flask_app reference
             with flask_app.app_context():
                 race = Race.query.get(race_id)
-                if race:
-                    self.logger.info(f"Starting race id {race.id}")
-                    # Update race status in the database
+                if not race:
+                    self.logger.error(f"Race with ID {race_id} not found")
+                    return False
+                    
+                # Only start if in scheduled state
+                if race.status != 'scheduled':
+                    self.logger.warning(f"Race {race_id} is already {race.status}, cannot start")
+                    return False
+                    
+                self.logger.info(f"Starting race id {race.id}")
+                # Send the command to the hardware first
+                command_sent = self.send_command("startRace", {"race_id": str(race_id)})
+                
+                if command_sent:
+                    # Only update status if command was sent successfully
                     race.status = 'in_progress'
                     race.start_time = datetime.utcnow()
                     db.session.commit()
-                
-                return self.send_command("start_race", {"race_id": race_id})
+                    return True
+                else:
+                    self.logger.error(f"Failed to send start command to hardware for race {race_id}")
+                    return False
         except Exception as e:
             self.logger.error(f"Error starting race: {e}")
-            return self.send_command("start_race", {"race_id": race_id})
+            return False
     
     def reset_timer(self):
         """Reset the race timer"""

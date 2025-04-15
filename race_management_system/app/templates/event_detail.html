@@ -65,7 +65,9 @@
                                 <td>
                                     <a href="{{ url_for('main.race_detail', race_id=race.id) }}" class="btn btn-sm btn-primary">View</a>
                                     {% if race.status == 'scheduled' %}
-                                        <button class="btn btn-sm btn-success">Start Race</button>
+                                        <form action="{{ url_for('main.start_race', race_id=race.id) }}" method="POST" style="display: inline;">
+                                            <button type="submit" class="btn btn-sm btn-success">Start Race</button>
+                                        </form>
                                     {% endif %}
                                 </td>
                             </tr>
